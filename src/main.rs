@@ -6,7 +6,7 @@ use board::*;
 fn main() {
     use player::Player;
     let mut bo = Board::new_start();
-    let w = player::SeqPlayer {};
+    let w = player::IOPlayer {};
     let b = player::SeqPlayer {};
 
     let mut t = 0usize;
@@ -16,12 +16,10 @@ fn main() {
 
     let mut buffer = String::new();
     let stdin = io::stdin();
-    let mut handle = stdin.lock();
-    let mut it = handle.lines();
 
     println!("{}", bo);
     loop {
-        let (cur, color) = if t % 2 == 0 {
+        let (cur:&Player, color) = if t % 2 == 0 {
             (&w, Color::White)
         } else {
             (&b, Color::Black)
@@ -36,7 +34,8 @@ fn main() {
         }
         println!("{:?}\n{}", color, bo);
 
-        it.next();
+        let mut handle = stdin.lock();
+        handle.read_line(&mut buffer);
     }
 }
 

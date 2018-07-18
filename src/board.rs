@@ -6,6 +6,27 @@ pub struct Move {
     pub to: (u8, u8),
 }
 
+use std::str::FromStr;
+use std::num::ParseIntError;
+
+
+impl FromStr for Move {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let coords: Vec<&str> = s
+                                 .split(" ")
+                                 .collect();
+
+        let fx = coords[0].parse::<u8>()?;
+        let fy = coords[1].parse::<u8>()?;
+        let tx = coords[2].parse::<u8>()?;
+        let ty = coords[3].parse::<u8>()?;
+
+        Ok(Move { from: (fx,fy), to: (tx, ty) })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     White,

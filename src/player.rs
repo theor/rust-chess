@@ -3,6 +3,28 @@ use board::*;
 pub trait Player {
     fn get_move(&self, c: Color, b: &Board) -> Move;
 }
+pub struct IOPlayer {}
+impl Player for IOPlayer {
+    fn get_move(&self, c: Color, b: &Board) -> Move {
+        use std::io;
+        use std::io::prelude::*;
+
+        let mut buffer = String::new();
+        let stdin = io::stdin();
+        let mut handle = stdin.lock();
+        
+        loop {
+            handle.read_line(&mut buffer).unwrap();
+
+            let p = buffer.parse::<Move>();
+            if let Ok(m) = p {
+                return m;
+            }
+            buffer.clear();
+        }
+        unreachable!()
+    }
+}
 
 pub struct SeqPlayer {}
 
