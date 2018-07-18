@@ -6,8 +6,8 @@ use board::*;
 fn main() {
     use player::Player;
     let mut bo = Board::new_start();
-    let w = player::SeqPlayer{};
-    let b = player::SeqPlayer{};
+    let w = player::SeqPlayer {};
+    let b = player::SeqPlayer {};
 
     let mut t = 0usize;
 
@@ -19,13 +19,23 @@ fn main() {
     let mut handle = stdin.lock();
     let mut it = handle.lines();
 
-    println!("White:\n{}", bo);
+    println!("{}", bo);
     loop {
-        let (cur,color) = if t % 2 == 0 { (&w, Color::White) } else { (&b, Color::Black) };
-        t += 1;
+        let (cur, color) = if t % 2 == 0 {
+            (&w, Color::White)
+        } else {
+            (&b, Color::Black)
+        };
         let m = cur.get_move(color, &bo);
-        bo = bo.apply(&m);
+
+        if let Some(newboard) = bo.apply(&m) {
+            bo = newboard;
+            t += 1;
+        } else {
+            println!("wrong move: {:?}", m);
+        }
         println!("{:?}\n{}", color, bo);
+
         it.next();
     }
 }

@@ -1,11 +1,12 @@
 use std::fmt;
 
+#[derive(Debug)]
 pub struct Move {
-    pub from: (u8,u8),
-    pub to: (u8,u8),
+    pub from: (u8, u8),
+    pub to: (u8, u8),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     White,
     Black,
@@ -57,12 +58,61 @@ impl Board {
         }
     }
 
-    pub fn apply(&self, m:&Move) -> Board {
-        self.clone()
+    pub fn all_white(&self) -> u64 {
+        self.white_pawns | self.white_knights | self.white_bishops | self.white_rooks
+            | self.white_queens | self.white_king
     }
 
+    pub fn all_black(&self) -> u64 {
+        self.black_pawns | self.black_knights
+            | self.black_bishops | self.black_rooks | self.black_queens | self.black_king
+    }
+
+    pub fn all(&self) -> u64 {
+        self.all_white() | self.all_black()
+    }
+
+    pub fn apply(&self, m: &Move) -> Option<Board> {
+        let (x, y) = m.from;
+        let (tx, ty) = m.to;
+        self.at(x, y).map(|(p, c)| {
+            let mut new = self.clone();
+            {
+                let from = new.get_pc_board_mut(&p, &c);
+                Board::unset(from, x, y);
+                Board::set(from, tx, ty);
+            }
+            new
+        })
+    }
+
+    pub fn set(u: &mut u64, x: u8, y: u8) {
+        *u = *u | (1u64 << (63 - (y * 8 + x)))
+    }
+    pub fn unset(u: &mut u64, x: u8, y: u8) {
+        *u = *u ^ (1u64 << (63 - (y * 8 + x)))
+    }
     pub fn has(u: u64, x: u8, y: u8) -> bool {
         u & (1u64 << (63 - (y * 8 + x))) != 0u64
+    }
+    fn get_pc_board_mut(&mut self, p: &Piece, c: &Color) -> &mut u64 {
+        use Piece::*;
+        use Color::*;
+        match (p, c) {
+            (&Pawn, &White) => &mut self.white_pawns,
+            (&Knight, &White) => &mut self.white_knights,
+            (&Bishop, &White) => &mut self.white_bishops,
+            (&Rook, &White) => &mut self.white_rooks,
+            (&Queen, &White) => &mut self.white_queens,
+            (&King, &White) => &mut self.white_king,
+
+            (&Pawn, &Black) => &mut self.black_pawns,
+            (&Knight, &Black) => &mut self.black_knights,
+            (&Bishop, &Black) => &mut self.black_bishops,
+            (&Rook, &Black) => &mut self.black_rooks,
+            (&Queen, &Black) => &mut self.black_queens,
+            (&King, &Black) => &mut self.black_king,
+        }
     }
     fn get_pc_board(&self, p: &Piece, c: &Color) -> u64 {
         use Piece::*;
@@ -82,6 +132,9 @@ impl Board {
             (&Queen, &Black) => self.black_queens,
             (&King, &Black) => self.black_king,
         }
+    }
+    pub fn any_at(&self, x: u8, y: u8) -> bool {
+        Board::has(self.all(), x, y)
     }
     pub fn at(&self, x: u8, y: u8) -> Option<(Piece, Color)> {
         use Piece::*;
@@ -109,10 +162,21 @@ impl Board {
         }
         res
     }
-    fn fmt_f(&self, f: &mut fmt::Formatter, ffn: &Fn(Option<(Piece, Color)>, &mut fmt::Formatter) -> ()) -> fmt::Result {
+    fn fmt_f(
+        &self,
+        f: &mut fmt::Formatter,
+        ffn: &Fn(Option<(Piece, Color)>, &mut fmt::Formatter) -> (),
+    ) -> fmt::Result {
         let b = self.hydrate();
-        for y in 0u8..8u8 {
-            write!(f, "|");
+        write!(f, "  ");
+        for x in 0u8..8u8 {
+            use std::char;
+            write!(f, "{}", char::from_u32('a' as u32 + x as u32).unwrap());
+        }
+        write!(f, "\n");
+        for yy in 0u8..8u8 {
+            let y = 7 - yy;
+            write!(f, "{}|", y);
             for x in 0u8..8u8 {
                 let i: usize = (y * 8 + x) as usize;
                 ffn(b[i], f);
@@ -127,7 +191,7 @@ impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Piece::*;
         use Color::*;
-        self.fmt_f(f, &|a,f| match a {
+        self.fmt_f(f, &|a, f| match a {
             None => write!(f, "{}", " ").unwrap(),
 
             Some((Pawn, White)) => write!(f, "{}", "\u{2659}").unwrap(),
