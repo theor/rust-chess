@@ -70,13 +70,18 @@ impl Validator {
                     }
                 },
                 Piece::Knight => {
-                    let(dx,dy) = (Self::delta_abs(m.to.0,m.from.0),
-                                  Self::delta_abs(m.to.1,m.from.1));
                     let valid_dist = (dx == 2 && dy == 1) || (dx == 1 && dy == 2);
                     MoveType::map(
                         valid_dist && b.color_or_empty_at(c.rev(), &m.to),
                         !b.empty_at(&m.to)
                     )
+                },
+                Piece::Rook => {
+                    if dx != 0 && dy != 0 {
+                        None
+                    } else {
+                        Some(MoveType::Quiet)
+                    }
                 }
                 _ => None,
             }

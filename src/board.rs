@@ -280,3 +280,7 @@ impl fmt::Display for Board {
         })
     }
 }
+
+pub fn parse(s:&str) -> Board {
+    Board::new_start()
+}

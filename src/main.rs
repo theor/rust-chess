@@ -43,6 +43,11 @@ fn main() {
 }
 
 #[test]
+fn parse() {
+    assert_eq!(board::parse(""), Board::new_start());
+}
+
+#[test]
 fn has_empty() {
     assert_eq!(false, Board::has(0b0, 0, 0));
 }
