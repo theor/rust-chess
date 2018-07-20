@@ -10,10 +10,10 @@ pub struct Move {
 }
 
 impl Move {
-    pub fn new(fx:u8, fy:u8, tx:u8, ty:u8) -> Self {
+    pub fn new(fx: u8, fy: u8, tx: u8, ty: u8) -> Self {
         Move {
-            from: Pos(fx,fy),
-            to: Pos(tx,ty),
+            from: Pos(fx, fy),
+            to: Pos(tx, ty),
         }
     }
 }
@@ -21,14 +21,11 @@ impl Move {
 use std::str::FromStr;
 use std::num::ParseIntError;
 
-
 impl FromStr for Move {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let coords: Vec<&str> = s.trim_right()
-                                 .split(" ")
-                                 .collect();
+        let coords: Vec<&str> = s.trim_right().split(" ").collect();
 
         println!("{:?}", coords);
         let fx = coords[0].parse::<u8>()?;
@@ -36,7 +33,10 @@ impl FromStr for Move {
         let tx = coords[2].parse::<u8>()?;
         let ty = coords[3].parse::<u8>()?;
 
-        Ok(Move { from: Pos(fx,fy), to: Pos(tx, ty) })
+        Ok(Move {
+            from: Pos(fx, fy),
+            to: Pos(tx, ty),
+        })
     }
 }
 
@@ -65,7 +65,7 @@ pub enum Piece {
     King,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Board {
     white_pawns: u64,
     white_knights: u64,
@@ -83,21 +83,38 @@ pub struct Board {
 }
 
 impl Board {
+    pub fn empty() -> Board {
+        Board {
+            white_pawns: 0u64,
+            white_knights: 0u64,
+            white_bishops: 0u64,
+            white_rooks: 0u64,
+            white_queens: 0u64,
+            white_king: 0u64,
+
+            black_pawns: 0u64,
+            black_knights: 0u64,
+            black_bishops: 0u64,
+            black_rooks: 0u64,
+            black_queens: 0u64,
+            black_king: 0u64,
+        }
+    }
     pub fn new_start() -> Board {
         Board {
             white_pawns: 0xFF00u64,
             white_knights: 0x42u64,
             white_bishops: 0x24u64,
             white_rooks: 0x81u64,
-            white_queens: 0x10u64,
-            white_king: 0x08u64,
+            white_queens: 0x08u64,
+            white_king: 0x10u64,
 
             black_pawns: 0x00FF_0000_0000_0000u64,
             black_knights: 0x4200_0000_0000_0000u64,
             black_bishops: 0x2400_0000_0000_0000u64,
             black_rooks: 0x8100_0000_0000_0000u64,
-            black_queens: 0x1000_0000_0000_0000u64,
-            black_king: 0x0800_0000_0000_0000u64,
+            black_queens: 0x0800_0000_0000_0000u64,
+            black_king: 0x1000_0000_0000_0000u64,
         }
     }
 
@@ -107,8 +124,8 @@ impl Board {
     }
 
     pub fn all_black(&self) -> u64 {
-        self.black_pawns | self.black_knights
-            | self.black_bishops | self.black_rooks | self.black_queens | self.black_king
+        self.black_pawns | self.black_knights | self.black_bishops | self.black_rooks
+            | self.black_queens | self.black_king
     }
 
     pub fn all(&self) -> u64 {
@@ -180,21 +197,21 @@ impl Board {
         Board::has(self.all(), x, y)
     }
 
-     pub fn empty_at(&self, p:&Pos) -> bool {
-        let &Pos(x,y) = p;
+    pub fn empty_at(&self, p: &Pos) -> bool {
+        let &Pos(x, y) = p;
         !Board::has(self.all(), x, y)
     }
 
-    pub fn color_or_empty_at(&self, c: Color, p:&Pos) -> bool {
-        let &Pos(x,y) = p;
+    pub fn color_or_empty_at(&self, c: Color, p: &Pos) -> bool {
+        let &Pos(x, y) = p;
         match c {
             Color::White => !Board::has(self.all_black(), x, y),
             Color::Black => !Board::has(self.all_white(), x, y),
         }
     }
 
-    pub fn color_at(&self, c: Color, p:&Pos) -> bool {
-        let &Pos(x,y) = p;
+    pub fn color_at(&self, c: Color, p: &Pos) -> bool {
+        let &Pos(x, y) = p;
         match c {
             Color::White => Board::has(self.all_white(), x, y),
             Color::Black => Board::has(self.all_black(), x, y),
@@ -202,8 +219,8 @@ impl Board {
     }
 
     pub fn at_pos(&self, m: &Pos) -> Option<(Piece, Color)> {
-        let &Pos(x,y) = m;
-        self.at(x,y) 
+        let &Pos(x, y) = m;
+        self.at(x, y)
     }
 
     pub fn at(&self, x: u8, y: u8) -> Option<(Piece, Color)> {
@@ -281,6 +298,41 @@ impl fmt::Display for Board {
     }
 }
 
-pub fn parse(s:&str) -> Board {
-    Board::new_start()
+pub fn parse(s: &str) -> Option<Board> {
+    //KQRBNP
+    use Piece::*;
+    use Color::*;
+    let mut b = Board::empty();
+    let mut y = 7;
+    for l in s.lines() {
+        
+        for x in 0..8 {
+        // for y in 0..8 {
+            if let Some((p,c)) = l.chars().nth(x as usize).and_then(|c| {
+                match c {
+                    'k' => Some((King, Black)),
+                    'q' => Some((Queen, Black)),
+                    'r' => Some((Rook, Black)),
+                    'b' => Some((Bishop, Black)),
+                    'n' => Some((Knight, Black)),
+                    'p' => Some((Pawn, Black)),
+                    'K' => Some((King, White)),
+                    'Q' => Some((Queen, White)),
+                    'R' => Some((Rook, White)),
+                    'B' => Some((Bishop, White)),
+                    'N' => Some((Knight, White)),
+                    'P' => Some((Pawn, White)),
+                    _ => None,
+                }
+            }) {
+                let bb = b.get_pc_board_mut(&p, &c);
+                Board::set(bb, x, y);
+            }
+        }
+        if y == 0 {
+            break;
+        }
+        y -= 1;
+    }
+    Some(b)
 }
