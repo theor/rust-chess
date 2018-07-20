@@ -18,7 +18,11 @@ impl Player for IOPlayer {
 
             let p = buffer.parse::<Move>();
             if let Ok(m) = p {
+                println!("{:?}", m);
                 return m;
+            }
+            else {
+                println!("{:?}", p);
             }
             buffer.clear();
         }
@@ -33,25 +37,25 @@ impl Player for SeqPlayer {
         if c == Color::White {
             if b.any_at(2, 2) {
                 Move {
-                    from: (2, 2),
-                    to: (1, 0),
+                    from: Pos(2, 2),
+                    to: Pos(1, 0),
                 }
             } else {
                 Move {
-                    from: (1, 0),
-                    to: (2, 2),
+                    from: Pos(1, 0),
+                    to: Pos(2, 2),
                 }
             }
         } else {
             if b.any_at(1, 7) {
                 Move {
-                    from: (1, 7),
-                    to: (2, 5),
+                    from: Pos(1, 7),
+                    to: Pos(2, 5),
                 }
             } else {
                 Move {
-                    from: (2, 5),
-                    to: (1, 7),
+                    from: Pos(2, 5),
+                    to: Pos(1, 7),
                 }
             }
         }

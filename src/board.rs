@@ -1,9 +1,21 @@
 use std::fmt;
 
 #[derive(Debug)]
+pub struct Pos(pub u8, pub u8);
+
+#[derive(Debug)]
 pub struct Move {
-    pub from: (u8, u8),
-    pub to: (u8, u8),
+    pub from: Pos,
+    pub to: Pos,
+}
+
+impl Move {
+    pub fn new(fx:u8, fy:u8, tx:u8, ty:u8) -> Self {
+        Move {
+            from: Pos(fx,fy),
+            to: Pos(tx,ty),
+        }
+    }
 }
 
 use std::str::FromStr;
@@ -14,16 +26,17 @@ impl FromStr for Move {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let coords: Vec<&str> = s
+        let coords: Vec<&str> = s.trim_right()
                                  .split(" ")
                                  .collect();
 
+        println!("{:?}", coords);
         let fx = coords[0].parse::<u8>()?;
         let fy = coords[1].parse::<u8>()?;
         let tx = coords[2].parse::<u8>()?;
         let ty = coords[3].parse::<u8>()?;
 
-        Ok(Move { from: (fx,fy), to: (tx, ty) })
+        Ok(Move { from: Pos(fx,fy), to: Pos(tx, ty) })
     }
 }
 
@@ -31,6 +44,15 @@ impl FromStr for Move {
 pub enum Color {
     White,
     Black,
+}
+
+impl Color {
+    pub fn rev(&self) -> Color {
+        match self {
+            &Color::White => Color::Black,
+            &Color::Black => Color::White,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -94,8 +116,8 @@ impl Board {
     }
 
     pub fn apply(&self, m: &Move) -> Option<Board> {
-        let (x, y) = m.from;
-        let (tx, ty) = m.to;
+        let Pos(x, y) = m.from;
+        let Pos(tx, ty) = m.to;
         self.at(x, y).map(|(p, c)| {
             let mut new = self.clone();
             {
@@ -108,13 +130,13 @@ impl Board {
     }
 
     pub fn set(u: &mut u64, x: u8, y: u8) {
-        *u = *u | (1u64 << (63 - (y * 8 + x)))
+        *u = *u | (1u64 << ((y * 8 + x)))
     }
     pub fn unset(u: &mut u64, x: u8, y: u8) {
-        *u = *u ^ (1u64 << (63 - (y * 8 + x)))
+        *u = *u ^ (1u64 << ((y * 8 + x)))
     }
     pub fn has(u: u64, x: u8, y: u8) -> bool {
-        u & (1u64 << (63 - (y * 8 + x))) != 0u64
+        u & (1u64 << ((y * 8 + x))) != 0u64
     }
     fn get_pc_board_mut(&mut self, p: &Piece, c: &Color) -> &mut u64 {
         use Piece::*;
@@ -157,6 +179,33 @@ impl Board {
     pub fn any_at(&self, x: u8, y: u8) -> bool {
         Board::has(self.all(), x, y)
     }
+
+     pub fn empty_at(&self, c: Color, p:&Pos) -> bool {
+        let &Pos(x,y) = p;
+        !Board::has(self.all(), x, y)
+    }
+
+    pub fn color_or_empty_at(&self, c: Color, p:&Pos) -> bool {
+        let &Pos(x,y) = p;
+        match c {
+            Color::White => !Board::has(self.all_black(), x, y),
+            Color::Black => !Board::has(self.all_white(), x, y),
+        }
+    }
+
+    pub fn color_at(&self, c: Color, p:&Pos) -> bool {
+        let &Pos(x,y) = p;
+        match c {
+            Color::White => Board::has(self.all_white(), x, y),
+            Color::Black => Board::has(self.all_black(), x, y),
+        }
+    }
+
+    pub fn at_pos(&self, m: &Pos) -> Option<(Piece, Color)> {
+        let &Pos(x,y) = m;
+        self.at(x,y) 
+    }
+
     pub fn at(&self, x: u8, y: u8) -> Option<(Piece, Color)> {
         use Piece::*;
         use Color::*;
