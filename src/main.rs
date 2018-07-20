@@ -45,16 +45,14 @@ fn main() {
 #[test]
 fn parse() {
     //KQRBNP kqrbnp
-    let s = "
-rnbqkbnr
-pppppppp
-________
-________
-________
-________
-PPPPPPPP
-RNBQKBNR";
-    let b = board::parse(s).unwrap();
+    let b = board::parse("rnbqkbnr
+                          pppppppp
+                          ________
+                          ________
+                          ________
+                          ________
+                          PPPPPPPP
+                          RNBQKBNR").unwrap();
     println!("{}", b);
     assert_eq!(Board::new_start(), b);
 }
@@ -206,10 +204,11 @@ fn validate_knight() {
     );
 }
 
+// rook
+
 #[test]
 fn validate_rook_h_quiet() {
-    //KQRBNP kqrbnp
-    let s = "
+    let b = board::parse("
 ________
 ________
 ________
@@ -217,8 +216,7 @@ ________
 ________
 ________
 ________
-R_______";
-    let b = board::parse(s).unwrap();
+R_______").unwrap();
     println!("{}", b);
     assert_eq!(
         Some(Quiet),
@@ -233,18 +231,18 @@ R_______";
         Validator::check_move(&b, &Move::new(0, 0, 2, 2))
     );
 }
+
 #[test]
 fn validate_rook_obstacle() {
     //KQRBNP kqrbnp
-    let s = "
-________
-________
-________
-________
-________
-________
-________
-R_n_____";
+    let s = "________
+             ________
+             ________
+             ________
+             ________
+             ________
+             ________
+             R_n_____";
     let b = board::parse(s).unwrap();
     println!("{}", b);
     assert_eq!(
@@ -256,6 +254,8 @@ R_n_____";
         Validator::check_move(&b, &Move::new(0, 0, 3, 0))
     );
 }
+
+// Bishop
 
 #[test]
 fn validate_bishop_quiet() {
@@ -290,5 +290,27 @@ ________";
     assert_eq!(
         None,
         Validator::check_move(&b, &Move::new(2, 2, 4, 5))
+    );
+}
+
+#[test]
+fn validate_bishop_capture() {
+    //KQRBNP kqrbnp
+    let b = board::parse("________
+                          ________
+                          ________
+                          ____N___
+                          ________
+                          __b_____
+                          ________
+                          ________").unwrap();
+    println!("{}", b);
+    assert_eq!(
+        Some(Capture),
+        Validator::check_move(&b, &Move::new(2, 2, 4, 4))
+    );
+    assert_eq!(
+        None,
+        Validator::check_move(&b, &Move::new(2, 2, 5, 5))
     );
 }
