@@ -234,7 +234,7 @@ R_______";
     );
 }
 #[test]
-fn validate_rook_obstable() {
+fn validate_rook_obstacle() {
     //KQRBNP kqrbnp
     let s = "
 ________
@@ -254,5 +254,41 @@ R_n_____";
     assert_eq!(
         None,
         Validator::check_move(&b, &Move::new(0, 0, 3, 0))
+    );
+}
+
+#[test]
+fn validate_bishop_quiet() {
+    //KQRBNP kqrbnp
+    let s = "
+________
+________
+________
+________
+________
+__b_____
+________
+________";
+    let b = board::parse(s).unwrap();
+    println!("{}", b);
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(2, 2, 0, 0))
+    );
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(2, 2, 3, 3))
+    );
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(2, 2, 3, 1))
+    );
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(2, 2, 0, 4))
+    );
+    assert_eq!(
+        None,
+        Validator::check_move(&b, &Move::new(2, 2, 4, 5))
     );
 }

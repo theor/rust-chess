@@ -76,6 +76,20 @@ impl Validator {
                         !b.empty_at(&m.to)
                     )
                 },
+                Piece::Bishop => {
+                    if dx != dy {
+                        None
+                    } else {
+                        let (sx,sy) = (if m.from.0 < m.to.0 { 1i16 } else { -1 }, if m.from.1 < m.to.1 { 1i16 } else { -1 });
+                        for i in 1..dx as i16 {
+                            let dpos = Pos((m.from.0 as i16 + sx * i) as u8, (m.from.1 as i16 + sy * i) as u8);
+                            if !b.empty_at(&dpos) {
+                                return None;
+                            }
+                        }
+                        MoveType::map(b.color_or_empty_at(c.rev(), &m.to), !b.empty_at(&m.to))
+                    }
+                }
                 Piece::Rook => {
                     if dx != 0 && dy != 0 {
                         None
