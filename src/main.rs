@@ -45,12 +45,13 @@ fn main() {
 #[test]
 fn parse() {
     //KQRBNP kqrbnp
-    let s = "rnbqkbnr
+    let s = "
+rnbqkbnr
 pppppppp
-        
-        
-        
-        
+________
+________
+________
+________
 PPPPPPPP
 RNBQKBNR";
     let b = board::parse(s).unwrap();
@@ -202,5 +203,56 @@ fn validate_knight() {
     assert_eq!(
         Some(Capture),
         Validator::check_move(&b3, &Move::new(1, 0, 2, 2))
+    );
+}
+
+#[test]
+fn validate_rook_h_quiet() {
+    //KQRBNP kqrbnp
+    let s = "
+________
+________
+________
+________
+________
+________
+________
+R_______";
+    let b = board::parse(s).unwrap();
+    println!("{}", b);
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(0, 0, 0, 2))
+    );
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(0, 0, 2, 0))
+    );
+    assert_eq!(
+        None,
+        Validator::check_move(&b, &Move::new(0, 0, 2, 2))
+    );
+}
+#[test]
+fn validate_rook_obstable() {
+    //KQRBNP kqrbnp
+    let s = "
+________
+________
+________
+________
+________
+________
+________
+R_n_____";
+    let b = board::parse(s).unwrap();
+    println!("{}", b);
+    assert_eq!(
+        Some(Capture),
+        Validator::check_move(&b, &Move::new(0, 0, 2, 0))
+    );
+    assert_eq!(
+        None,
+        Validator::check_move(&b, &Move::new(0, 0, 3, 0))
     );
 }

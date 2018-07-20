@@ -305,11 +305,13 @@ pub fn parse(s: &str) -> Option<Board> {
     let mut b = Board::empty();
     let mut y = 7;
     for l in s.lines() {
-        
-        for x in 0..8 {
-        // for y in 0..8 {
-            if let Some((p,c)) = l.chars().nth(x as usize).and_then(|c| {
-                match c {
+        // skip empty lines
+        if l.len() == 0 {
+            continue;
+        }
+        let mut x = 0;
+        for cc in l.chars() {
+            if let Some((p,c)) = match cc {
                     'k' => Some((King, Black)),
                     'q' => Some((Queen, Black)),
                     'r' => Some((Rook, Black)),
@@ -322,12 +324,13 @@ pub fn parse(s: &str) -> Option<Board> {
                     'B' => Some((Bishop, White)),
                     'N' => Some((Knight, White)),
                     'P' => Some((Pawn, White)),
-                    _ => None,
-                }
-            }) {
+                    '_' => None,
+                    _ => continue, // ignore everything else
+            } {
                 let bb = b.get_pc_board_mut(&p, &c);
                 Board::set(bb, x, y);
             }
+            x += 1;
         }
         if y == 0 {
             break;

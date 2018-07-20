@@ -80,7 +80,16 @@ impl Validator {
                     if dx != 0 && dy != 0 {
                         None
                     } else {
-                        Some(MoveType::Quiet)
+                        use std::u8;
+                        let (sx,sy) = (if dx == 0 { 0 } else { 1 }, if dy == 0 { 0 } else { 1 });
+                        let d = u8::max(dx,dy);
+                        for i in 1..d {
+                            let dpos = Pos(m.from.0 + sx * i, m.from.1 + sy * i);
+                            if !b.empty_at(&dpos) {
+                                return None;
+                            }
+                        }
+                        MoveType::map(b.color_or_empty_at(c.rev(), &m.to), !b.empty_at(&m.to))
                     }
                 }
                 _ => None,
