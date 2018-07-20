@@ -80,32 +80,84 @@ fn move_bank() {
 }
 
 use validator::Validator;
+use validator::MoveType::{Capture,Quiet};
 
 #[test]
-fn validate_a() {
+fn validate_pawn_w_quiet_move1() {
     let b = Board::new_start();
-    assert_eq!(true, Validator::check_move(&b, &Move::new(0,1,0,2)));
-    assert_eq!(true, Validator::check_move(&b, &Move::new(0,1,0,3)));
-    assert_eq!(false, Validator::check_move(&b, &Move::new(0,1,0,4)));
-    // assert_eq!(false, Validator::check_move(&b, &Move::new(0,1,1,2)));
+    assert_eq!(Some(Quiet), Validator::check_move(&b, &Move::new(0,1,0,2)));
 }
+
 #[test]
-fn validate_a2() {
+fn validate_pawn_w_quiet_move2() {
     let b = Board::new_start();
-    assert_eq!(false, Validator::check_move(&b, &Move::new(0,1,1,2)));
+    assert_eq!(Some(Quiet), Validator::check_move(&b, &Move::new(0,1,0,3)));
 }
+
+#[test]
+fn validate_pawn_w_invalid_too_far() {
+    let b = Board::new_start();
+    assert_eq!(None, Validator::check_move(&b, &Move::new(0,1,0,4)));
+}
+
+#[test]
+fn validate_pawn_w_capture_enpassant() {
+    let b = Board::new_start();
+    let b = b.apply(&Move::new(2,6,1,2)).unwrap();
+    assert_eq!(Some(Capture), Validator::check_move(&b, &Move::new(0,1,1,2)));
+}
+
+#[test]
+fn validate_pawn_w_invalid_quiet_enpassant() {
+    let b = Board::new_start();
+    assert_eq!(None, Validator::check_move(&b, &Move::new(0,1,1,2)));
+}
+
+// black pawn
+
+#[test]
+fn validate_pawn_b_quiet_move1() {
+    let b = Board::new_start();
+    assert_eq!(Some(Quiet), Validator::check_move(&b, &Move::new(0,6,0,5)));
+}
+
+#[test]
+fn validate_pawn_b_quiet_move2() {
+    let b = Board::new_start();
+    assert_eq!(Some(Quiet), Validator::check_move(&b, &Move::new(0,6,0,4)));
+}
+
+#[test]
+fn validate_pawn_b_invalid_too_far() {
+    let b = Board::new_start();
+    assert_eq!(None, Validator::check_move(&b, &Move::new(0,6,0,3)));
+}
+
+#[test]
+fn validate_pawn_b_capture_enpassant() {
+    let b = Board::new_start();
+    let b = b.apply(&Move::new(2,1,1,5)).unwrap();
+    assert_eq!(Some(Capture), Validator::check_move(&b, &Move::new(0,6,1,5)));
+}
+
+#[test]
+fn validate_pawn_b_invalid_quiet_enpassant() {
+    let b = Board::new_start();
+    assert_eq!(None, Validator::check_move(&b, &Move::new(0,6,1,5)));
+}
+
 #[test]
 fn validate_knight() {
     let b = Board::new_start();
-    assert_eq!(true, Validator::check_move(&b, &Move::new(1,0,0,2)));
-    assert_eq!(true, Validator::check_move(&b, &Move::new(1,0,2,2)));
-    assert_eq!(false, Validator::check_move(&b, &Move::new(1,0,1,2)));
+    assert_eq!(Some(Quiet), Validator::check_move(&b, &Move::new(1,0,0,2)));
+    assert_eq!(Some(Quiet), Validator::check_move(&b, &Move::new(1,0,2,2)));
+    assert_eq!(None, Validator::check_move(&b, &Move::new(1,0,1,2)));
 
     let b2 = b.apply(&Move::new(2,1,2,2)).unwrap();
     println!("{}", b2);
-    assert_eq!(false, Validator::check_move(&b2, &Move::new(1,0,2,2)));
+    assert_eq!(None, Validator::check_move(&b2, &Move::new(1,0,2,2)));
     
     let b3 = b.apply(&Move::new(2,6,2,2)).unwrap();
     println!("{}", b3);
-    assert_eq!(true, Validator::check_move(&b3, &Move::new(1,0,2,2)));
+    assert_eq!(Some(Capture), Validator::check_move(&b3, &Move::new(1,0,2,2)));
 }

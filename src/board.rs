@@ -180,7 +180,7 @@ impl Board {
         Board::has(self.all(), x, y)
     }
 
-     pub fn empty_at(&self, c: Color, p:&Pos) -> bool {
+     pub fn empty_at(&self, p:&Pos) -> bool {
         let &Pos(x,y) = p;
         !Board::has(self.all(), x, y)
     }
