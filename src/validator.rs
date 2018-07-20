@@ -119,7 +119,7 @@ impl Validator {
                         Self::validate_sliding(m, c, b, dx, dy)
                     }
                 }
-                _ => None,
+                Piece::King => { MoveType::map(dx + dy == 1, b.color_or_empty_at(c.rev(), &m.to)) }
             }
         } else {
             None
