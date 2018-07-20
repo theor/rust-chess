@@ -44,6 +44,15 @@ impl Validator {
             b - a
         }
     }
+    fn cmp(a:u8, b:u8) -> i16 {
+        if a > b {
+            -1
+        } else if a < b {
+            1
+        } else {
+            0
+        }
+    }
     pub fn check_move(b:&Board, m:&Move) -> Option<MoveType> {
         use std::i16;
         let(dx,dy) = (Self::delta_abs(m.to.0,m.from.0),
@@ -80,7 +89,7 @@ impl Validator {
                     if dx != dy {
                         None
                     } else {
-                        let (sx,sy) = (if m.from.0 < m.to.0 { 1i16 } else { -1 }, if m.from.1 < m.to.1 { 1i16 } else { -1 });
+                        let (sx,sy) = (Self::cmp(m.from.0, m.to.0),Self::cmp(m.from.1, m.to.1));
                         for i in 1..dx as i16 {
                             let dpos = Pos((m.from.0 as i16 + sx * i) as u8, (m.from.1 as i16 + sy * i) as u8);
                             if !b.empty_at(&dpos) {
@@ -95,10 +104,24 @@ impl Validator {
                         None
                     } else {
                         use std::u8;
-                        let (sx,sy) = (if dx == 0 { 0 } else { 1 }, if dy == 0 { 0 } else { 1 });
+                        let (sx,sy) = (Self::cmp(m.from.0, m.to.0),Self::cmp(m.from.1, m.to.1));
                         let d = u8::max(dx,dy);
-                        for i in 1..d {
-                            let dpos = Pos(m.from.0 + sx * i, m.from.1 + sy * i);
+                        for i in 1..d as i16 {
+                            let dpos = Pos((m.from.0 as i16 + sx * i) as u8, (m.from.1 as i16 + sy * i) as u8);
+                            if !b.empty_at(&dpos) {
+                                return None;
+                            }
+                        }
+                        MoveType::map(b.color_or_empty_at(c.rev(), &m.to), !b.empty_at(&m.to))
+                    }
+                }
+                Piece::Queen => {
+                    if dx != dy && dx != 0 && dy != 0 {
+                        None
+                    } else {
+                        let (sx,sy) = (Self::cmp(m.from.0, m.to.0),Self::cmp(m.from.1, m.to.1));
+                        for i in 1..dx as i16 {
+                            let dpos = Pos((m.from.0 as i16 + sx * i) as u8, (m.from.1 as i16 + sy * i) as u8);
                             if !b.empty_at(&dpos) {
                                 return None;
                             }

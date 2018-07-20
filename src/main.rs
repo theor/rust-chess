@@ -28,7 +28,8 @@ fn main() {
         };
         let m = cur.get_move(color, &bo);
 
-        if let Some(newboard) = bo.apply(&m) {
+        
+        if let Some(newboard) = Validator::check_move(&bo, &m).and(bo.apply(&m)) {
             bo = newboard;
             t += 1;
         } else {
@@ -214,21 +215,29 @@ ________
 ________
 ________
 ________
+__R_____
 ________
-________
-R_______").unwrap();
+________").unwrap();
     println!("{}", b);
     assert_eq!(
         Some(Quiet),
-        Validator::check_move(&b, &Move::new(0, 0, 0, 2))
+        Validator::check_move(&b, &Move::new(2, 2, 0, 2))
     );
     assert_eq!(
         Some(Quiet),
-        Validator::check_move(&b, &Move::new(0, 0, 2, 0))
+        Validator::check_move(&b, &Move::new(2, 2, 2, 0))
+    );
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(2, 2, 4, 2))
+    );
+    assert_eq!(
+        Some(Quiet),
+        Validator::check_move(&b, &Move::new(2, 2, 2, 4))
     );
     assert_eq!(
         None,
-        Validator::check_move(&b, &Move::new(0, 0, 2, 2))
+        Validator::check_move(&b, &Move::new(2, 2, 4, 4))
     );
 }
 
