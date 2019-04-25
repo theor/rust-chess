@@ -19,19 +19,43 @@ impl Move {
 }
 
 use std::str::FromStr;
-use std::num::ParseIntError;
+use std::{
+    num::ParseIntError,
+    char::ParseCharError,
+};
+
+#[derive(Debug)]
+pub enum ParseError {
+    RowError(ParseIntError),
+    CollError(ParseCharError),
+}
+
+impl Into<ParseError> for ParseIntError {
+    fn into(self) -> ParseError {
+        ParseError::RowError(self)
+    }
+}
+
+impl Into<ParseError> for ParseCharError {
+    fn into(self) -> ParseError {
+        ParseError::CollError(self)
+    }
+}
 
 impl FromStr for Move {
-    type Err = ParseIntError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let coords: Vec<&str> = s.trim_right().split(" ").collect();
 
         println!("{:?}", coords);
-        let fx = coords[0].parse::<u8>()?;
-        let fy = coords[1].parse::<u8>()?;
-        let tx = coords[2].parse::<u8>()?;
-        let ty = coords[3].parse::<u8>()?;
+        let fcx = coords[0].parse::<char>().map_err(ParseError::CollError)?;
+        let fx = fcx as u8 - 'a' as u8;
+        let fy = coords[1].parse::<u8>().map_err(ParseError::RowError)?;
+
+        let ftx = coords[2].parse::<char>().map_err(ParseError::CollError)?;
+        let tx = ftx as u8 - 'a' as u8;
+        let ty = coords[3].parse::<u8>().map_err(ParseError::RowError)?;
 
         Ok(Move {
             from: Pos(fx, fy),
