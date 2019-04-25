@@ -1,11 +1,11 @@
-use board::*;
+use crate::board::*;
 
 pub trait Player {
     fn get_move(&self, c: Color, b: &Board) -> Move;
 }
 pub struct IOPlayer {}
 impl Player for IOPlayer {
-    fn get_move(&self, c: Color, b: &Board) -> Move {
+    fn get_move(&self, _c: Color, _b: &Board) -> Move {
         use std::io;
         use std::io::prelude::*;
 

@@ -1,4 +1,4 @@
-use board::*;
+use crate::board::*;
 
 pub struct Validator {}
 

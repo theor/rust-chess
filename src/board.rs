@@ -156,8 +156,8 @@ impl Board {
         u & (1u64 << ((y * 8 + x))) != 0u64
     }
     fn get_pc_board_mut(&mut self, p: &Piece, c: &Color) -> &mut u64 {
-        use Piece::*;
-        use Color::*;
+        use crate::Piece::*;
+        use crate::Color::*;
         match (p, c) {
             (&Pawn, &White) => &mut self.white_pawns,
             (&Knight, &White) => &mut self.white_knights,
@@ -175,8 +175,8 @@ impl Board {
         }
     }
     fn get_pc_board(&self, p: &Piece, c: &Color) -> u64 {
-        use Piece::*;
-        use Color::*;
+        use crate::Piece::*;
+        use crate::Color::*;
         match (p, c) {
             (&Pawn, &White) => self.white_pawns,
             (&Knight, &White) => self.white_knights,
@@ -224,8 +224,8 @@ impl Board {
     }
 
     pub fn at(&self, x: u8, y: u8) -> Option<(Piece, Color)> {
-        use Piece::*;
-        use Color::*;
+        use crate::Piece::*;
+        use crate::Color::*;
         for c in &[White, Black] {
             for p in &[Pawn, Knight, Bishop, Rook, Queen, King] {
                 let u = self.get_pc_board(p, c);
@@ -276,8 +276,8 @@ impl Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Piece::*;
-        use Color::*;
+        use crate::Piece::*;
+        use crate::Color::*;
         self.fmt_f(f, &|a, f| match a {
             None => write!(f, "{}", " ").unwrap(),
 
@@ -300,8 +300,8 @@ impl fmt::Display for Board {
 
 pub fn parse(s: &str) -> Option<Board> {
     //KQRBNP
-    use Piece::*;
-    use Color::*;
+    use crate::Piece::*;
+    use crate::Color::*;
     let mut b = Board::empty();
     let mut y = 7;
     for l in s.lines() {

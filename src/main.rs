@@ -3,10 +3,10 @@ mod player;
 mod ai;
 mod validator;
 
-use board::*;
+use crate::board::*;
 
 fn main() {
-    use player::Player;
+    use crate::player::Player;
     let mut bo = Board::new_start();
     let w = player::IOPlayer {};
     let b = player::SeqPlayer {};
@@ -95,8 +95,8 @@ fn move_bank() {
     println!("{}", b);
 }
 
-use validator::Validator;
-use validator::MoveType::{Capture, Quiet};
+use crate::validator::Validator;
+use crate::validator::MoveType::{Capture, Quiet};
 
 #[test]
 fn validate_pawn_w_quiet_move1() {
