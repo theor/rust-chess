@@ -106,12 +106,12 @@ pub enum Piece {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PartialBoard {
-    pawns: u64,
-    knights: u64,
-    bishops: u64,
-    rooks: u64,
-    queens: u64,
-    king: u64,
+    pub pawns: u64,
+    pub knights: u64,
+    pub bishops: u64,
+    pub rooks: u64,
+    pub queens: u64,
+    pub king: u64,
 }
 
 impl PartialBoard {
@@ -138,23 +138,23 @@ impl PartialBoard {
         }
     }
 
-     pub fn get_pc_board_mut(&mut self, p: &Piece) -> &mut u64 {
+     pub fn get_pc_board_mut(&mut self, p: Piece) -> &mut u64 {
         use crate::Piece::*;
         match p {
-            &Pawn => &mut self.pawns,
-            &Knight => &mut self.knights,
-            &Bishop => &mut self.bishops,
-            &Rook => &mut self.rooks,
-            &Queen => &mut self.queens,
-            &King => &mut self.king,
+            Pawn => &mut self.pawns,
+            Knight => &mut self.knights,
+            Bishop => &mut self.bishops,
+            Rook => &mut self.rooks,
+            Queen => &mut self.queens,
+            King => &mut self.king,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Board {
-    white: PartialBoard,
-    black: PartialBoard,
+    pub white: PartialBoard,
+    pub black: PartialBoard,
 }
 
 impl Board {
@@ -205,7 +205,7 @@ impl Board {
         self.at(x, y).map(|(p, c)| {
             let mut new = self.clone();
             {
-                let from = new.get_pc_board_mut(&p, &c);
+                let from = new.get_pc_board_mut(p, c);
                 Board::unset(from, x, y);
                 Board::set(from, tx, ty);
             }
@@ -230,14 +230,14 @@ impl Board {
         }
     }
 
-    pub fn get_player_board_mut(&mut self, c: &Color) -> &mut PartialBoard {
+    pub fn get_player_board_mut(&mut self, c: Color) -> &mut PartialBoard {
         match c {
-            &Color::White => &mut self.white,
-            &Color::Black => &mut self.black,
+            Color::White => &mut self.white,
+            Color::Black => &mut self.black,
         }
     }
 
-    fn get_pc_board_mut(&mut self, p: &Piece, c: &Color) -> &mut u64 {
+    pub fn get_pc_board_mut(&mut self, p: Piece, c: Color) -> &mut u64 {
         self.get_player_board_mut(c).get_pc_board_mut(p)
     }
 
@@ -379,7 +379,7 @@ pub fn parse(s: &str) -> Option<Board> {
                     '_' => None,
                     _ => continue, // ignore everything else
             } {
-                let bb = b.get_pc_board_mut(&p, &c);
+                let bb = b.get_pc_board_mut(p, c);
                 Board::set(bb, x, y);
             }
             x += 1;

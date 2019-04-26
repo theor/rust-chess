@@ -12,7 +12,7 @@ bitflags! {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub struct Case(u8);
+pub struct Case(pub u8);
 
 impl fmt::Debug for Case {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -23,6 +23,20 @@ impl fmt::Debug for Case {
 impl Case {
     pub fn new(row:u8, col:u8) -> Self {
         Case(row*8u8+col)
+    }
+
+    pub fn try_offset(&self, row: i8, col: i8) -> Option<Self> {
+        let nrow = self.row() as i8 + row;
+        let ncol = self.col() as i8 + col;
+        if nrow >= 0 && nrow < 8 && ncol >= 0 && ncol < 8 {
+            Some(Case::new(
+                nrow as u8,
+                ncol as u8,
+                )
+            )
+        } else {
+            None
+        }
     }
 
     pub fn offset(&self, row: i8, col: i8) -> Self {
@@ -42,7 +56,7 @@ impl Into<Case> for u8 {
     fn into(self) -> Case { Case(self) }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct GenMove {
     from: Case,
     to: Case,
@@ -92,16 +106,22 @@ impl CaseIterator {
 }
 
 pub fn generate_knight_moves(player: &PartialBoard, other: &PartialBoard, moves: &mut Vec<GenMove>) {
+    let mut pieces = CaseIterator::new(player.get_pc_board(&Piece::Knight));
+    while let Some(piece) = pieces.next() {
+        let mut moves_it = CaseIterator::new(KNIGHT_MOVES[piece.0 as usize]);
+        while let Some(dest) = moves_it.next() {
+            moves.push(GenMove::new(piece, dest, Flags::NONE))
+        }
+    }
 
 }
 pub fn generate_pawn_moves(color: Color, player: &PartialBoard, other: &PartialBoard, moves: &mut Vec<GenMove>) {
-    let mut pawns = CaseIterator::new(player.get_pc_board(&Piece::Pawn));
+    let mut pieces = CaseIterator::new(player.get_pc_board(&Piece::Pawn));
     let dir: i8 = color.map(1, -1);
-    while let Some(pawn) = pawns.next() {
-        println!("set {:?} pawn: {:?}", player, pawn);
-        let dest = pawn.offset(dir, 0);
+    while let Some(piece) = pieces.next() {
+        let dest = piece.offset(dir, 0);
 
-        moves.push(GenMove::new(pawn, dest, Flags::NONE))
+        moves.push(GenMove::new(piece, dest, Flags::NONE))
     }
 
 }
@@ -157,11 +177,77 @@ fn case_iterator_rnd() {
 #[test]
 fn genmoves_start() {
     let b = Board::new_start();
-    println!("{:#?}", generate_moves(&b, Color::White));
+    let moves = generate_moves(&b, Color::White);
+    println!("{:#?}\n{} moves", moves, moves.len());
 }
 
-// lazy_static! {
-//     static ref WHITE_PAWNS: [u64; 64] = {
-//         [0u64; 64]
-//     };
-// }
+#[test]
+fn genmoves_knights_white() {
+    let b = Board {
+            white: PartialBoard {
+                knights: 0x42u64,
+                ..PartialBoard::empty()
+            },
+            black: PartialBoard::empty(),
+    };
+    let moves = generate_moves(&b, Color::White);
+    println!("{:#?}\n{} moves", moves, moves.len());
+}
+
+
+#[test]
+fn genmoves_knight_white_center() {
+    let mut b = Board::empty();
+    {
+        let mut kb = b.get_pc_board_mut(Piece::Knight, Color::White);
+        Board::set(kb, 3, 3);
+    }
+
+    let moves = generate_moves(&b, Color::White);
+    println!("{:#?}\n{} moves", moves, moves.len());
+    assert_eq!(4, moves.len())
+}
+
+#[test]
+fn genmoves_knight_white_bottom_right() {
+    let mut b = Board::empty();
+    {
+        let mut kb = b.get_pc_board_mut(Piece::Knight, Color::White);
+        Board::set(kb, 1, 1);
+    }
+
+    let moves = generate_moves(&b, Color::White);
+    println!("{:#?}\n{} moves", moves, moves.len());
+    assert_eq!(2, moves.len())
+}
+
+#[test]
+fn genmoves_knight_white_top_left() {
+    let mut b = Board::empty();
+    {
+        let mut kb = b.get_pc_board_mut(Piece::Knight, Color::White);
+        Board::set(kb, 6, 6);
+    }
+
+    let moves = generate_moves(&b, Color::White);
+    println!("{:#?}\n{} moves", moves, moves.len());
+    assert_eq!(2, moves.len())
+}
+
+
+lazy_static! {
+    static ref KNIGHT_MOVES: [u64; 64] = {
+        let mut a = [0u64; 64];
+            for c in 0..64 {
+                let case: Case = c.into();
+                let mut mov = 0u64;
+                for &(delta_x, delta_y) in &[(1,2), (-1, 2), (1, -2), (-1, -2)] {
+                    if let Some(dest) = case.try_offset(delta_x, delta_y) {
+                        mov |= dest.board();
+                    }
+                }
+                a[c as usize] = mov;
+            }
+        a
+    };
+}
