@@ -89,7 +89,7 @@ impl CaseIterator {
     }
 }
 
-pub fn generate_knight_moves(b: &Board, player: Color, moves: &mut Vec<GenMove>) {
+pub fn generate_knight_moves(player: &PartialBoard, other: &PartialBoard, moves: &mut Vec<GenMove>) {
 
 }
 pub fn generate_pawn_moves(b: &Board, player: Color, moves: &mut Vec<GenMove>) {
@@ -107,9 +107,10 @@ pub fn generate_pawn_moves(b: &Board, player: Color, moves: &mut Vec<GenMove>) {
 }
 pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     let mut moves = Vec::new();
+    let (this, other) = if player == Color::White { (b.white, b.black) } else (b.black, b.white);
 
     generate_pawn_moves(&b, player, &mut moves);
-    generate_knight_moves(&b, player, &mut moves);
+    generate_knight_moves(&this, &other, &mut moves);
 
     moves
 }
