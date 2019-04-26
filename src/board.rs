@@ -90,66 +90,94 @@ pub enum Piece {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Board {
-    white_pawns: u64,
-    white_knights: u64,
-    white_bishops: u64,
-    white_rooks: u64,
-    white_queens: u64,
-    white_king: u64,
+pub struct PartialBoard {
+    pawns: u64,
+    knights: u64,
+    bishops: u64,
+    rooks: u64,
+    queens: u64,
+    king: u64,
+}
 
-    black_pawns: u64,
-    black_knights: u64,
-    black_bishops: u64,
-    black_rooks: u64,
-    black_queens: u64,
-    black_king: u64,
+impl PartialBoard {
+    pub fn empty() -> PartialBoard {
+        PartialBoard {
+            pawns: 0u64,
+            knights: 0u64,
+            bishops: 0u64,
+            rooks: 0u64,
+            queens: 0u64,
+            king: 0u64,
+        }
+    }
+
+     pub fn get_pc_board(&self, p: &Piece) -> u64 {
+        use crate::Piece::*;
+        match p {
+            &Pawn => self.pawns,
+            &Knight => self.knights,
+            &Bishop => self.bishops,
+            &Rook => self.rooks,
+            &Queen => self.queens,
+            &King => self.king,
+        }
+    }
+
+     pub fn get_pc_board_mut(&mut self, p: &Piece) -> &mut u64 {
+        use crate::Piece::*;
+        match p {
+            &Pawn => &mut self.pawns,
+            &Knight => &mut self.knights,
+            &Bishop => &mut self.bishops,
+            &Rook => &mut self.rooks,
+            &Queen => &mut self.queens,
+            &King => &mut self.king,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Board {
+    white: PartialBoard,
+    black: PartialBoard,
 }
 
 impl Board {
     pub fn empty() -> Board {
         Board {
-            white_pawns: 0u64,
-            white_knights: 0u64,
-            white_bishops: 0u64,
-            white_rooks: 0u64,
-            white_queens: 0u64,
-            white_king: 0u64,
-
-            black_pawns: 0u64,
-            black_knights: 0u64,
-            black_bishops: 0u64,
-            black_rooks: 0u64,
-            black_queens: 0u64,
-            black_king: 0u64,
+            white: PartialBoard::empty(),
+            black: PartialBoard::empty(),
         }
     }
     pub fn new_start() -> Board {
         Board {
-            white_pawns: 0xFF00u64,
-            white_knights: 0x42u64,
-            white_bishops: 0x24u64,
-            white_rooks: 0x81u64,
-            white_queens: 0x08u64,
-            white_king: 0x10u64,
-
-            black_pawns: 0x00FF_0000_0000_0000u64,
-            black_knights: 0x4200_0000_0000_0000u64,
-            black_bishops: 0x2400_0000_0000_0000u64,
-            black_rooks: 0x8100_0000_0000_0000u64,
-            black_queens: 0x0800_0000_0000_0000u64,
-            black_king: 0x1000_0000_0000_0000u64,
+            white: PartialBoard {
+                pawns: 0xFF00u64,
+                knights: 0x42u64,
+                bishops: 0x24u64,
+                rooks: 0x81u64,
+                queens: 0x08u64,
+                king: 0x10u64,
+            },
+            black: PartialBoard {
+                pawns: 0x00FF_0000_0000_0000u64,
+                knights: 0x4200_0000_0000_0000u64,
+                bishops: 0x2400_0000_0000_0000u64,
+                rooks: 0x8100_0000_0000_0000u64,
+                queens: 0x0800_0000_0000_0000u64,
+                king: 0x1000_0000_0000_0000u64,
+            },
         }
     }
 
     pub fn all_white(&self) -> u64 {
-        self.white_pawns | self.white_knights | self.white_bishops | self.white_rooks
-            | self.white_queens | self.white_king
+        self.white.pawns | self.white.knights | self.white.bishops | self.white.rooks
+            | self.white.queens | self.white.king
     }
 
     pub fn all_black(&self) -> u64 {
-        self.black_pawns | self.black_knights | self.black_bishops | self.black_rooks
-            | self.black_queens | self.black_king
+        self.black.pawns | self.black.knights | self.black.bishops | self.black.rooks
+            | self.black.queens | self.black.king
     }
 
     pub fn all(&self) -> u64 {
@@ -179,44 +207,29 @@ impl Board {
     pub fn has(u: u64, x: u8, y: u8) -> bool {
         u & (1u64 << ((y * 8 + x))) != 0u64
     }
+
+    pub fn get_player_board(&self, c: &Color) -> &PartialBoard {
+        match c {
+            &Color::White => &self.white,
+            &Color::Black => &self.black,
+        }
+    }
+
+    pub fn get_player_board_mut(&mut self, c: &Color) -> &mut PartialBoard {
+        match c {
+            &Color::White => &mut self.white,
+            &Color::Black => &mut self.black,
+        }
+    }
+
     fn get_pc_board_mut(&mut self, p: &Piece, c: &Color) -> &mut u64 {
-        use crate::Piece::*;
-        use crate::Color::*;
-        match (p, c) {
-            (&Pawn, &White) => &mut self.white_pawns,
-            (&Knight, &White) => &mut self.white_knights,
-            (&Bishop, &White) => &mut self.white_bishops,
-            (&Rook, &White) => &mut self.white_rooks,
-            (&Queen, &White) => &mut self.white_queens,
-            (&King, &White) => &mut self.white_king,
-
-            (&Pawn, &Black) => &mut self.black_pawns,
-            (&Knight, &Black) => &mut self.black_knights,
-            (&Bishop, &Black) => &mut self.black_bishops,
-            (&Rook, &Black) => &mut self.black_rooks,
-            (&Queen, &Black) => &mut self.black_queens,
-            (&King, &Black) => &mut self.black_king,
-        }
+        self.get_player_board_mut(c).get_pc_board_mut(p)
     }
+
     pub fn get_pc_board(&self, p: &Piece, c: &Color) -> u64 {
-        use crate::Piece::*;
-        use crate::Color::*;
-        match (p, c) {
-            (&Pawn, &White) => self.white_pawns,
-            (&Knight, &White) => self.white_knights,
-            (&Bishop, &White) => self.white_bishops,
-            (&Rook, &White) => self.white_rooks,
-            (&Queen, &White) => self.white_queens,
-            (&King, &White) => self.white_king,
-
-            (&Pawn, &Black) => self.black_pawns,
-            (&Knight, &Black) => self.black_knights,
-            (&Bishop, &Black) => self.black_bishops,
-            (&Rook, &Black) => self.black_rooks,
-            (&Queen, &Black) => self.black_queens,
-            (&King, &Black) => self.black_king,
-        }
+        self.get_player_board(c).get_pc_board(p)
     }
+    
     pub fn any_at(&self, x: u8, y: u8) -> bool {
         Board::has(self.all(), x, y)
     }
