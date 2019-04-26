@@ -2,6 +2,12 @@ mod board;
 mod player;
 mod ai;
 mod validator;
+mod move_generator;
+
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate bitflags;
 
 use crate::board::*;
 
@@ -19,6 +25,7 @@ fn main() {
     // let mut buffer = String::new();
     // let stdin = io::stdin();
 
+    println!("size of board: {} bytes", std::mem::size_of::<Board>());
     println!("{}", bo);
     loop {
         let (cur, color): (&Player, Color) = if t % 2 == 0 {

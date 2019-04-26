@@ -198,7 +198,7 @@ impl Board {
             (&King, &Black) => &mut self.black_king,
         }
     }
-    fn get_pc_board(&self, p: &Piece, c: &Color) -> u64 {
+    pub fn get_pc_board(&self, p: &Piece, c: &Color) -> u64 {
         use crate::Piece::*;
         use crate::Color::*;
         match (p, c) {
