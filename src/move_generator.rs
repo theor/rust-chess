@@ -34,6 +34,8 @@ impl Case {
 
     pub fn row(&self) -> u8 { self.0 / 8 }
     pub fn col(&self) -> u8 { self.0 % 8 }
+
+    pub fn board(&self) -> u64 { 1 << self.0 }
 }
 
 impl Into<Case> for u8 {
@@ -92,24 +94,22 @@ impl CaseIterator {
 pub fn generate_knight_moves(player: &PartialBoard, other: &PartialBoard, moves: &mut Vec<GenMove>) {
 
 }
-pub fn generate_pawn_moves(b: &Board, player: Color, moves: &mut Vec<GenMove>) {
-    let mut pawns = CaseIterator::new(b.get_pc_board(&Piece::Pawn, &player));
-    let dir: i8 = match player {
-        Color::White => 1,
-        Color::Black => -1,
-    };
+pub fn generate_pawn_moves(color: Color, player: &PartialBoard, other: &PartialBoard, moves: &mut Vec<GenMove>) {
+    let mut pawns = CaseIterator::new(player.get_pc_board(&Piece::Pawn));
+    let dir: i8 = color.map(1, -1);
     while let Some(pawn) = pawns.next() {
         println!("set {:?} pawn: {:?}", player, pawn);
         let dest = pawn.offset(dir, 0);
+
         moves.push(GenMove::new(pawn, dest, Flags::NONE))
     }
 
 }
 pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     let mut moves = Vec::new();
-    let (this, other) = if player == Color::White { (b.white, b.black) } else (b.black, b.white);
+    let (this, other) = (b.get_player_board(player), b.get_player_board(!player));
 
-    generate_pawn_moves(&b, player, &mut moves);
+    generate_pawn_moves(player, &this, &other, &mut moves);
     generate_knight_moves(&this, &other, &mut moves);
 
     moves

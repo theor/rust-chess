@@ -70,11 +70,26 @@ pub enum Color {
     Black,
 }
 
+impl std::ops::Not for Color {
+    type Output = Color;
+
+    fn not(self) -> Color {
+        if self == Color::White { Color::Black } else { Color::White }
+    }
+}
+
 impl Color {
     pub fn rev(&self) -> Color {
         match self {
             &Color::White => Color::Black,
             &Color::Black => Color::White,
+        }
+    }
+
+    pub fn map<T>(&self, white: T, black: T) -> T {
+        match self {
+            &Color::White => white,
+            &Color::Black => black,
         }
     }
 }
@@ -208,10 +223,10 @@ impl Board {
         u & (1u64 << ((y * 8 + x))) != 0u64
     }
 
-    pub fn get_player_board(&self, c: &Color) -> &PartialBoard {
+    pub fn get_player_board(&self, c: Color) -> &PartialBoard {
         match c {
-            &Color::White => &self.white,
-            &Color::Black => &self.black,
+            Color::White => &self.white,
+            Color::Black => &self.black,
         }
     }
 
@@ -226,7 +241,7 @@ impl Board {
         self.get_player_board_mut(c).get_pc_board_mut(p)
     }
 
-    pub fn get_pc_board(&self, p: &Piece, c: &Color) -> u64 {
+    pub fn get_pc_board(&self, p: &Piece, c: Color) -> u64 {
         self.get_player_board(c).get_pc_board(p)
     }
     
@@ -265,7 +280,7 @@ impl Board {
         use crate::Color::*;
         for c in &[White, Black] {
             for p in &[Pawn, Knight, Bishop, Rook, Queen, King] {
-                let u = self.get_pc_board(p, c);
+                let u = self.get_pc_board(p, *c);
                 if Board::has(u, x, y) {
                     return Some((*p, *c));
                 }
