@@ -2,7 +2,7 @@ use crate::board::*;
 use std::fmt;
 
 bitflags! {
-    struct Flags: u32 {
+    pub struct Flags: u32 {
         const NONE = 0b0;
         const EN_PASSANT = 0b00000001;
         const CASTLE = 0b00000010;
@@ -25,6 +25,13 @@ impl Case {
         Case(row*8u8+col)
     }
 
+    pub fn offset(&self, row: i8, col: i8) -> Self {
+        Case::new(
+            (self.row() as i8 + row) as u8,
+            (self.col() as i8 + col) as u8,
+            )
+    }
+
     pub fn row(&self) -> u8 { self.0 / 8 }
     pub fn col(&self) -> u8 { self.0 % 8 }
 }
@@ -41,11 +48,11 @@ pub struct GenMove {
 }
 
 impl GenMove {
-    pub fn new(from: Case, to: Case) -> Self {
+    pub fn new(from: Case, to: Case, flags: Flags) -> Self {
         GenMove {
             from,
             to,
-            flags: Flags::NONE,
+            flags,
         }
     }
 }
@@ -82,18 +89,29 @@ impl CaseIterator {
     }
 }
 
-pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
-    let v = Vec::new();
+pub fn generate_knight_moves(b: &Board, player: Color, moves: &mut Vec<GenMove>) {
 
+}
+pub fn generate_pawn_moves(b: &Board, player: Color, moves: &mut Vec<GenMove>) {
     let mut pawns = CaseIterator::new(b.get_pc_board(&Piece::Pawn, &player));
-
-    while let Some(set) = pawns.next() {
-        println!("set {:?} pawn: {:?}", player, set);
-        
-
+    let dir: i8 = match player {
+        Color::White => 1,
+        Color::Black => -1,
+    };
+    while let Some(pawn) = pawns.next() {
+        println!("set {:?} pawn: {:?}", player, pawn);
+        let dest = pawn.offset(dir, 0);
+        moves.push(GenMove::new(pawn, dest, Flags::NONE))
     }
 
-    v
+}
+pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
+    let mut moves = Vec::new();
+
+    generate_pawn_moves(&b, player, &mut moves);
+    generate_knight_moves(&b, player, &mut moves);
+
+    moves
 }
 
 #[test]
