@@ -68,7 +68,6 @@ impl Validator {
     }
 
     pub fn check_move(b: &Board, m: &Move) -> Option<MoveType> {
-        use std::i16;
         let (dx, dy) = (
             Self::delta_abs(m.to.0, m.from.0),
             Self::delta_abs(m.to.1, m.from.1),

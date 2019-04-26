@@ -33,7 +33,8 @@ impl Into<Case> for u8 {
     fn into(self) -> Case { Case(self) }
 }
 
-struct GenMove {
+#[derive(Debug)]
+pub struct GenMove {
     from: Case,
     to: Case,
     flags: Flags,
@@ -81,13 +82,14 @@ impl CaseIterator {
     }
 }
 
-fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
+pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     let v = Vec::new();
 
     let mut pawns = CaseIterator::new(b.get_pc_board(&Piece::Pawn, &player));
 
     while let Some(set) = pawns.next() {
         println!("set {:?} pawn: {:?}", player, set);
+        
 
     }
 
@@ -131,6 +133,12 @@ fn case_iterator_rnd() {
     assert_eq!(Some(Case(60)), c.next());
     assert_eq!(Some(Case(63)), c.next());
     assert_eq!(None, c.next());
+}
+
+#[test]
+fn genmoves_start() {
+    let b = Board::new_start();
+    println!("{:#?}", generate_moves(&b, Color::White));
 }
 
 // lazy_static! {

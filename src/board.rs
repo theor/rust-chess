@@ -279,20 +279,20 @@ impl Board {
         ffn: &Fn(Option<(Piece, Color)>, &mut fmt::Formatter) -> (),
     ) -> fmt::Result {
         let b = self.hydrate();
-        write!(f, "  ");
+        write!(f, "  ")?;
         for x in 0u8..8u8 {
             use std::char;
-            write!(f, "{}", char::from_u32('a' as u32 + x as u32).unwrap());
+            write!(f, "{}", char::from_u32('a' as u32 + x as u32).unwrap())?;
         }
-        write!(f, "\n");
+        write!(f, "\n")?;
         for yy in 0u8..8u8 {
             let y = 7 - yy;
-            write!(f, "{}|", y);
+            write!(f, "{}|", y)?;
             for x in 0u8..8u8 {
                 let i: usize = (y * 8 + x) as usize;
                 ffn(b[i], f);
             }
-            write!(f, "|\n");
+            write!(f, "|\n")?;
         }
         Ok(())
     }

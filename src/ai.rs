@@ -9,18 +9,18 @@ impl Player for AiPlayer {
     }
 }
 
-pub struct MoveBank {
+// pub struct MoveBank {
     
-}
+// }
 
-impl MoveBank {
-    pub fn new() -> Self {
-        MoveBank {
+// impl MoveBank {
+//     pub fn new() -> Self {
+//         MoveBank {
 
-        }
-    }
+//         }
+//     }
 
-    pub fn get_moves_for(&self, _c: Color, _p: Piece, _pos: Pos) {
+//     pub fn get_moves_for(&self, _c: Color, _p: Piece, _pos: Pos) {
 
-    }
-}
+//     }
+// }
