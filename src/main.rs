@@ -102,7 +102,7 @@ fn move_bank() {
 }
 
 use crate::validator::Validator;
-use crate::validator::MoveType::{Capture, Quiet};
+
 
 #[test]
 fn validate_pawn_w_quiet_move1() {

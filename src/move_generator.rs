@@ -105,7 +105,7 @@ impl CaseIterator {
 
 pub fn generate_knight_moves(
     player: &PartialBoard,
-    other: &PartialBoard,
+    _other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
     let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Knight));
@@ -119,7 +119,7 @@ pub fn generate_knight_moves(
 pub fn generate_pawn_moves(
     color: Color,
     player: &PartialBoard,
-    other: &PartialBoard,
+    _other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
     let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Pawn));
