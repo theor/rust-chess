@@ -126,6 +126,11 @@ impl PartialBoard {
         }
     }
 
+    pub fn all(&self) -> u64 {
+        self.pawns | self.knights | self.bishops | self.rooks
+            | self.queens | self.king
+    }
+
      pub fn get_pc_board(&self, p: Piece) -> u64 {
         use crate::Piece::*;
         match p {
@@ -185,18 +190,8 @@ impl Board {
         }
     }
 
-    pub fn all_white(&self) -> u64 {
-        self.white.pawns | self.white.knights | self.white.bishops | self.white.rooks
-            | self.white.queens | self.white.king
-    }
-
-    pub fn all_black(&self) -> u64 {
-        self.black.pawns | self.black.knights | self.black.bishops | self.black.rooks
-            | self.black.queens | self.black.king
-    }
-
     pub fn all(&self) -> u64 {
-        self.all_white() | self.all_black()
+        self.white.all() | self.black.all()
     }
 
     pub fn apply(&self, m: &Move) -> Option<Board> {
@@ -257,16 +252,16 @@ impl Board {
     pub fn color_or_empty_at(&self, c: Color, p: &Pos) -> bool {
         let &Pos(x, y) = p;
         match c {
-            Color::White => !Board::has(self.all_black(), x, y),
-            Color::Black => !Board::has(self.all_white(), x, y),
+            Color::White => !Board::has(self.black.all(), x, y),
+            Color::Black => !Board::has(self.white.all(), x, y),
         }
     }
 
     pub fn color_at(&self, c: Color, p: &Pos) -> bool {
         let &Pos(x, y) = p;
         match c {
-            Color::White => Board::has(self.all_white(), x, y),
-            Color::Black => Board::has(self.all_black(), x, y),
+            Color::White => Board::has(self.white.all(), x, y),
+            Color::Black => Board::has(self.black.all(), x, y),
         }
     }
 

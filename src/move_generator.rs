@@ -7,6 +7,7 @@ bitflags! {
         const EN_PASSANT = 0b00000001;
         const CASTLE = 0b00000010;
         const DOUBLE_STEP = 0b00000100;
+        const CAPTURE = 0b1000;
         // const ABC = Self::A.bits | Self::B.bits | Self::C.bits;
     }
 }
@@ -104,15 +105,20 @@ impl CaseIterator {
 }
 
 pub fn generate_knight_moves(
+    color: Color,
     player: &PartialBoard,
-    _other: &PartialBoard,
+    other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
     let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Knight));
     while let Some(piece) = pieces.next() {
         let mut moves_it = CaseIterator::new(KNIGHT_MOVES[piece.0 as usize]);
         while let Some(dest) = moves_it.next() {
-            moves.push(GenMove::new(piece, dest, Flags::NONE))
+            println!("check\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}", player.all(), dest.board(), player.all() & dest.board());
+            if player.all() & dest.board() == 0 {
+                let flags = if other.all() & dest.board() == 0 { Flags::NONE } else { Flags::CAPTURE };
+                moves.push(GenMove::new(piece, dest, flags));
+            }
         }
     }
 }
@@ -130,12 +136,22 @@ pub fn generate_pawn_moves(
         moves.push(GenMove::new(piece, dest, Flags::NONE))
     }
 }
+
+pub fn generate_all_moves(
+    player: Color,
+    this: &PartialBoard,
+    other: &PartialBoard,
+    moves: &mut Vec<GenMove>,
+) {
+    generate_pawn_moves(player, &this, &other, moves);
+    generate_knight_moves(player, &this, &other, moves);
+}
+
 pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     let mut moves = Vec::new();
     let (this, other) = (b.get_player_board(player), b.get_player_board(!player));
 
-    generate_pawn_moves(player, &this, &other, &mut moves);
-    generate_knight_moves(&this, &other, &mut moves);
+    generate_all_moves(player, &this, &other, &mut moves);
 
     moves
 }
@@ -171,9 +187,9 @@ mod tests {
     use super::*;
     use galvanic_assert::matchers::collection::*;
     use galvanic_assert::matchers::*;
-    use std::str::Chars;
 
-    fn case(it: &mut Chars) -> Option<Case> {
+    fn case<I>(it: &mut I) -> Option<Case>
+    where I: Iterator<Item=char> {
         let fcx = it.next().unwrap();
         let fx = fcx as i8 - 'a' as i8;
         let fy = it.next().unwrap().to_digit(10).unwrap();
@@ -182,28 +198,43 @@ mod tests {
     }
 
     fn m(s: &str) -> GenMove {
-        assert!(s.len() == 4);
-        let mut chars = s.chars();
+        assert!(s.len() == 4 || s.len() == 5);
+        let mut chars = s.chars().peekable();
         let from = case(&mut chars).unwrap();
+        let flags = match chars.peek() {
+            Some('x') => { chars.next(); Flags::CAPTURE },
+            _ => Flags::NONE,
+        };
         let to = case(&mut chars).unwrap();
 
-        GenMove::new(from, to, Flags::NONE)
+        GenMove::new(from, to, flags)
     }
 
     fn parse_case(s: &str) -> Case {
         case(&mut s.chars()).unwrap()
     }
 
-    fn test_moves(setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>) {
+    fn test_moves_f<F>(setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>, f: F)
+    where
+        F: Fn(Color, &PartialBoard, &PartialBoard, &mut Vec<GenMove>),
+    {
         let mut b = Board::empty();
         for (c, p, case) in setup.iter() {
             *b.get_pc_board_mut(*p, *c) |= parse_case(case).board();
         }
 
         let expected_moves = expected_moves.iter().map(|x| m(x));
-        let moves = generate_moves(&b, Color::White);
+        let mut moves = Vec::new();
+        let player = Color::White;
+        let (this, other) = (b.get_player_board(player), b.get_player_board(!player));
+        f(player, &this, &other, &mut moves);
         println!("{:#?}\n{} moves", moves, moves.len());
+        assert_that!(&moves.len(), eq(expected_moves.len()));
         assert_that!(&moves, contains_in_any_order(expected_moves));
+    }
+
+    fn test_moves(setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>) {
+        test_moves_f(setup, expected_moves, generate_all_moves)
     }
 
     #[test]
@@ -288,6 +319,30 @@ mod tests {
         test_moves(
             vec![(Color::White, Piece::Knight, "g7")],
             vec!["g7e6", "g7e8", "g7f5", "g7h5"],
+        )
+    }
+
+    #[test]
+    fn genmoves_knight_white_top_right_one_occupied_case() {
+        test_moves_f(
+            vec![
+                (Color::White, Piece::Knight, "g7"),
+                (Color::White, Piece::Pawn, "e6"),
+            ],
+            vec![/*"g7e6",*/ "g7e8", "g7f5", "g7h5"],
+            generate_knight_moves,
+        )
+    }
+
+    #[test]
+    fn genmoves_knight_white_top_right_capture() {
+        test_moves_f(
+            vec![
+                (Color::White, Piece::Knight, "g7"),
+                (Color::Black, Piece::Pawn, "e6"),
+            ],
+            vec!["g7xe6", "g7e8", "g7f5", "g7h5"],
+            generate_knight_moves,
         )
     }
 }
