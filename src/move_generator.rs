@@ -134,16 +134,31 @@ pub fn generate_knight_moves(
 pub fn generate_pawn_moves(
     color: Color,
     player: &PartialBoard,
-    _other: &PartialBoard,
+    other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
     let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Pawn));
     // let dir: i8 = color.map(1, -1);
     while let Some(piece) = pieces.next() {
-        let cached = color.map(PAWN_MOVES_WHITE[piece.0 as usize], PAWN_MOVES_BLACK[piece.0 as usize]);
-        let mut cached_it = CaseIterator::new(cached);
-        while let Some(mov) = cached_it.next() {
-            moves.push(GenMove::new(piece, mov, Flags::NONE))
+        let cached_captures = color.map(PAWN_MOVES_WHITE_CAPTURES[piece.0 as usize], PAWN_MOVES_BLACK_CAPTURES[piece.0 as usize]);
+        let mut cached_it = CaseIterator::new(cached_captures);
+        let mut capture = false;
+        println!("cached captures {:#064b}", cached_captures);
+        while let Some(dest) = cached_it.next() {
+            println!("check pawn {:?}\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}", dest, dest.board(), other.all(), other.all() & dest.board());
+            if other.all() & dest.board() != 0 {
+                moves.push(GenMove::new(piece, dest, Flags::CAPTURE));
+                capture = true;
+            }
+        }
+        if !capture {
+            let cached = color.map(PAWN_MOVES_WHITE[piece.0 as usize], PAWN_MOVES_BLACK[piece.0 as usize]);
+            let mut cached_it = CaseIterator::new(cached);
+            while let Some(dest) = cached_it.next() {
+                if player.all() & dest.board() == 0 {
+                    moves.push(GenMove::new(piece, dest, Flags::NONE))
+                }
+            }
         }
         // let dest = piece.offset(dir, 0);
     }
@@ -168,34 +183,38 @@ pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     moves
 }
 
-fn generate_white_pawn_boards() -> [u64; 64] {
+fn generate_pawn_boards(row_double:u8, factor: i8) -> [u64; 64] {
     let mut a = [0u64; 64];
     for c in 0..64 {
         let case: Case = c.into();
         match case.row() {
             0 | 7 => continue,
-            1 => a[c as usize] = case.offset(1, 0).board() | case.offset(2, 0).board(),
-            _ => a[c as usize] = case.offset(1, 0).board(),
+            x if x == row_double => a[c as usize] = case.offset(factor, 0).board() | case.offset(2 * factor, 0).board(),
+            _ => a[c as usize] = case.offset(factor, 0).board(),
         }
     }
     a
 }
-fn generate_black_pawn_boards() -> [u64; 64] {
+fn generate_pawn_boards_capture(factor: i8) -> [u64; 64] {
     let mut a = [0u64; 64];
     for c in 0..64 {
         let case: Case = c.into();
         match case.row() {
-            0 | 7 => continue,
-            6 => a[c as usize] = case.offset(-1, 0).board() | case.offset(-2, 0).board(),
-            _ => a[c as usize] = case.offset(-1, 0).board(),
+            1...6 => {
+                if case.col() < 7 { a[c as usize] |= case.offset(factor, 1).board(); }
+                if case.col() > 0 { a[c as usize] |= case.offset(factor, -1).board(); }
+            },
+            _ => continue,
         }
     }
     a
 }
 
 lazy_static! {
-    static ref PAWN_MOVES_WHITE: [u64; 64] = generate_white_pawn_boards();
-    static ref PAWN_MOVES_BLACK: [u64; 64] = generate_black_pawn_boards();
+    static ref PAWN_MOVES_WHITE: [u64; 64] = generate_pawn_boards(1, 1);
+    static ref PAWN_MOVES_BLACK: [u64; 64] = generate_pawn_boards(6, -1);
+    static ref PAWN_MOVES_WHITE_CAPTURES: [u64; 64] = generate_pawn_boards_capture(1);
+    static ref PAWN_MOVES_BLACK_CAPTURES: [u64; 64] = generate_pawn_boards_capture(-1);
     static ref KNIGHT_MOVES: [u64; 64] = {
         let mut a = [0u64; 64];
         for c in 0..64 {
@@ -258,7 +277,7 @@ mod tests {
         case(&mut s.chars()).unwrap()
     }
 
-    fn test_moves_f<F>(setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>, f: F)
+    fn test_moves_f<F>(player: Color, setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>, f: F)
     where
         F: Fn(Color, &PartialBoard, &PartialBoard, &mut Vec<GenMove>),
     {
@@ -269,7 +288,6 @@ mod tests {
 
         let expected_moves = expected_moves.iter().map(|x| m(x));
         let mut moves = Vec::new();
-        let player = Color::White;
         let (this, other) = (b.get_player_board(player), b.get_player_board(!player));
         f(player, &this, &other, &mut moves);
         println!("{:#?}\n{} moves", moves, moves.len());
@@ -277,8 +295,8 @@ mod tests {
         assert_that!(&moves, contains_in_any_order(expected_moves));
     }
 
-    fn test_moves(setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>) {
-        test_moves_f(setup, expected_moves, generate_all_moves)
+    fn test_moves(player: Color, setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>) {
+        test_moves_f(player, setup, expected_moves, generate_all_moves)
     }
 
     #[test]
@@ -343,6 +361,7 @@ mod tests {
     #[test]
     fn genmoves_knight_white_center() {
         test_moves(
+            Color::White,
             vec![(Color::White, Piece::Knight, "d4")],
             vec![
                 "d4b3", "d4b5", "d4c2", "d4c6", "d4e2", "d4e6", "d4f3", "d4f5",
@@ -353,6 +372,7 @@ mod tests {
     #[test]
     fn genmoves_knight_white_bottom_left() {
         test_moves(
+            Color::White,
             vec![(Color::White, Piece::Knight, "b2")],
             vec!["b2c4", "b2d3", "b2d1", "b2a4"],
         )
@@ -361,6 +381,7 @@ mod tests {
     #[test]
     fn genmoves_knight_white_top_right() {
         test_moves(
+            Color::White,
             vec![(Color::White, Piece::Knight, "g7")],
             vec!["g7e6", "g7e8", "g7f5", "g7h5"],
         )
@@ -369,6 +390,7 @@ mod tests {
     #[test]
     fn genmoves_knight_white_top_right_one_occupied_case() {
         test_moves_f(
+            Color::White,
             vec![
                 (Color::White, Piece::Knight, "g7"),
                 (Color::White, Piece::Pawn, "e6"),
@@ -381,12 +403,39 @@ mod tests {
     #[test]
     fn genmoves_knight_white_top_right_capture() {
         test_moves_f(
+            Color::White,
             vec![
                 (Color::White, Piece::Knight, "g7"),
                 (Color::Black, Piece::Pawn, "e6"),
             ],
             vec!["g7xe6", "g7e8", "g7f5", "g7h5"],
             generate_knight_moves,
+        )
+    }
+
+    #[test]
+    fn genmoves_pawn_white_capture() {
+        test_moves_f(
+            Color::White,
+            vec![
+                (Color::White, Piece::Pawn, "e2"),
+                (Color::Black, Piece::Knight, "f3"),
+            ],
+            vec!["e2xf3"],
+            generate_pawn_moves,
+        )
+    }
+
+    #[test]
+    fn genmoves_pawn_black_capture() {
+        test_moves_f(
+            Color::Black,
+            vec![
+                (Color::Black, Piece::Pawn, "f3"),
+                (Color::White, Piece::Knight, "e2"),
+            ],
+            vec!["f3xe2"],
+            generate_pawn_moves,
         )
     }
 }
