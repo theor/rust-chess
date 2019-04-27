@@ -1,0 +1,1 @@
+cargo b && "C:\Program Files (x86)\cutechess\cutechess-cli" -engine cmd="C:\Users\theor\rust-chess\target\debug\chess.exe" arg=1 -engine cmd="C:\Users\theor\rust-chess\target\debug\chess.exe" arg=2 -each proto=uci tc=40/60

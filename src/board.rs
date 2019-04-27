@@ -3,10 +3,23 @@ use std::fmt;
 #[derive(Debug)]
 pub struct Pos(pub u8, pub u8);
 
+impl std::fmt::Display for Pos {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let col = "abcdefgh".chars().nth(self.0 as usize).unwrap();
+        write!(f, "{}{}", col, self.1 + 1)
+    }
+}
+
 #[derive(Debug)]
 pub struct Move {
     pub from: Pos,
     pub to: Pos,
+}
+
+impl std::fmt::Display for Move {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}{}", self.from, self.to)
+    }
 }
 
 impl Move {
@@ -19,10 +32,7 @@ impl Move {
 }
 
 use std::str::FromStr;
-use std::{
-    num::ParseIntError,
-    char::ParseCharError,
-};
+use std::{char::ParseCharError, num::ParseIntError};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -74,7 +84,11 @@ impl std::ops::Not for Color {
     type Output = Color;
 
     fn not(self) -> Color {
-        if self == Color::White { Color::Black } else { Color::White }
+        if self == Color::White {
+            Color::Black
+        } else {
+            Color::White
+        }
     }
 }
 
@@ -127,11 +141,10 @@ impl PartialBoard {
     }
 
     pub fn all(&self) -> u64 {
-        self.pawns | self.knights | self.bishops | self.rooks
-            | self.queens | self.king
+        self.pawns | self.knights | self.bishops | self.rooks | self.queens | self.king
     }
 
-     pub fn get_pc_board(&self, p: Piece) -> u64 {
+    pub fn get_pc_board(&self, p: Piece) -> u64 {
         use crate::Piece::*;
         match p {
             Pawn => self.pawns,
@@ -143,7 +156,7 @@ impl PartialBoard {
         }
     }
 
-     pub fn get_pc_board_mut(&mut self, p: Piece) -> &mut u64 {
+    pub fn get_pc_board_mut(&mut self, p: Piece) -> &mut u64 {
         use crate::Piece::*;
         match p {
             Pawn => &mut self.pawns,
@@ -197,25 +210,25 @@ impl Board {
     pub fn apply(&self, m: &Move) -> Option<Board> {
         let Pos(x, y) = m.from;
         let Pos(tx, ty) = m.to;
-        self.at(x, y).map(|(p, c)| {
-            let mut new = self.clone();
-            {
-                let from = new.get_pc_board_mut(p, c);
-                Board::unset(from, x, y);
-                Board::set(from, tx, ty);
-            }
-            new
-        })
+        let (p, c) = self.at(x, y)?;
+
+        let mut new = self.clone();
+        {
+            let from = new.get_pc_board_mut(p, c);
+            Board::unset(from, x, y);
+            Board::set(from, tx, ty);
+        }
+        Some(new)
     }
 
     pub fn set(u: &mut u64, x: u8, y: u8) {
-        *u = *u | (1u64 << ((y * 8 + x)))
+        *u = *u | (1u64 << (y * 8 + x))
     }
     pub fn unset(u: &mut u64, x: u8, y: u8) {
-        *u = *u ^ (1u64 << ((y * 8 + x)))
+        *u = *u ^ (1u64 << (y * 8 + x))
     }
     pub fn has(u: u64, x: u8, y: u8) -> bool {
-        u & (1u64 << ((y * 8 + x))) != 0u64
+        u & (1u64 << (y * 8 + x)) != 0u64
     }
 
     pub fn get_player_board(&self, c: Color) -> &PartialBoard {
@@ -239,7 +252,7 @@ impl Board {
     pub fn get_pc_board(&self, p: Piece, c: Color) -> u64 {
         self.get_player_board(c).get_pc_board(p)
     }
-    
+
     pub fn any_at(&self, x: u8, y: u8) -> bool {
         Board::has(self.all(), x, y)
     }
@@ -271,8 +284,8 @@ impl Board {
     }
 
     pub fn at(&self, x: u8, y: u8) -> Option<(Piece, Color)> {
-        use crate::Piece::*;
         use crate::Color::*;
+        use crate::Piece::*;
         for c in &[White, Black] {
             for p in &[Pawn, Knight, Bishop, Rook, Queen, King] {
                 let u = self.get_pc_board(*p, *c);
@@ -323,8 +336,8 @@ impl Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use crate::Piece::*;
         use crate::Color::*;
+        use crate::Piece::*;
         self.fmt_f(f, &|a, f| match a {
             None => write!(f, "{}", " ").unwrap(),
 
@@ -347,8 +360,8 @@ impl fmt::Display for Board {
 
 pub fn parse(s: &str) -> Option<Board> {
     //KQRBNP
-    use crate::Piece::*;
     use crate::Color::*;
+    use crate::Piece::*;
     let mut b = Board::empty();
     let mut y = 7;
     for l in s.lines() {
@@ -358,21 +371,21 @@ pub fn parse(s: &str) -> Option<Board> {
         }
         let mut x = 0;
         for cc in l.chars() {
-            if let Some((p,c)) = match cc {
-                    'k' => Some((King, Black)),
-                    'q' => Some((Queen, Black)),
-                    'r' => Some((Rook, Black)),
-                    'b' => Some((Bishop, Black)),
-                    'n' => Some((Knight, Black)),
-                    'p' => Some((Pawn, Black)),
-                    'K' => Some((King, White)),
-                    'Q' => Some((Queen, White)),
-                    'R' => Some((Rook, White)),
-                    'B' => Some((Bishop, White)),
-                    'N' => Some((Knight, White)),
-                    'P' => Some((Pawn, White)),
-                    '_' => None,
-                    _ => continue, // ignore everything else
+            if let Some((p, c)) = match cc {
+                'k' => Some((King, Black)),
+                'q' => Some((Queen, Black)),
+                'r' => Some((Rook, Black)),
+                'b' => Some((Bishop, Black)),
+                'n' => Some((Knight, Black)),
+                'p' => Some((Pawn, Black)),
+                'K' => Some((King, White)),
+                'Q' => Some((Queen, White)),
+                'R' => Some((Rook, White)),
+                'B' => Some((Bishop, White)),
+                'N' => Some((Knight, White)),
+                'P' => Some((Pawn, White)),
+                '_' => None,
+                _ => continue, // ignore everything else
             } {
                 let bb = b.get_pc_board_mut(p, c);
                 Board::set(bb, x, y);

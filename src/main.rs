@@ -6,6 +6,10 @@ mod validator;
 
 #[macro_use]
 extern crate lazy_static;
+
+#[macro_use]
+extern crate log;
+extern crate simplelog;
 #[macro_use]
 extern crate bitflags;
 
@@ -13,11 +17,42 @@ extern crate bitflags;
 #[macro_use]
 extern crate galvanic_assert;
 
-
 use crate::board::*;
 use crate::validator::Validator;
 
 fn main() {
+    use simplelog::*;
+    use std::env;
+    use std::fs::File;
+
+    let mut uci = true;
+    let mut i = "_d".to_owned();
+    // Prints each argument on a separate line
+
+    for argument in env::args().skip(1) {
+        if argument == "i" {
+            uci = false;
+        } else {
+            i = argument.to_owned();
+        }
+    }
+
+    let path = format!("C:\\Users\\theor\\rust-chess\\my_rust_binary{}.log", i);
+    CombinedLogger::init(vec![
+        TermLogger::new(LevelFilter::Debug, Config::default()).unwrap(),
+        WriteLogger::new(
+            LevelFilter::Debug,
+            Config::default(),
+            File::create(path).unwrap(),
+        ),
+    ])
+    .unwrap();
+
+    if uci {
+        engine_uci();
+        return;
+    }
+
     use crate::player::Player;
     let mut bo = Board::new_start();
     let w = player::IOPlayer {};
@@ -52,6 +87,101 @@ fn main() {
         // if waitforinput
         // let mut handle = stdin.lock();
         // handle.read_line(&mut buffer);
+    }
+}
+
+struct Engine {
+    board: Board,
+    move_count: usize,
+}
+
+impl Engine {
+    pub fn new() -> Self {
+        Engine {
+            board: Board::empty(),
+            move_count: 0,
+        }
+    }
+
+    fn output<S: std::fmt::Display + AsRef<str>>(&self, out: S) {
+        info!("{}", out);
+        print!("{}\n", out);
+    }
+
+    fn parse_move<I>(it: &mut std::iter::Peekable<I>) -> Option<Move>
+    where
+        I: Iterator<Item = char>,
+    {
+        while let Some(' ') = it.peek() {
+            it.next();
+        }
+        if let Some(from) = crate::move_generator::Case::parse(it) {
+            if let Some(to) = crate::move_generator::Case::parse(it) {
+                return Some(Move::new(from.col(), from.row(), to.col(), to.row()));
+            }
+        }
+        None
+    }
+
+    pub fn process(&mut self, cmd: &str) {
+        match cmd {
+            "quit" => return,
+            "uci" => {
+                self.output(format!("id name rustchess {}", "0.1"));
+                self.output("id author theor");
+                self.output("option name Clear Hash type button");
+                self.output("uciok");
+            }
+            "isready" => self.output("readyok"),
+            "ucinewgame" => {}
+            "position startpos" => self.board = Board::new_start(), // reset position
+            "position fen <FEN>" => unimplemented!(),               // reset position
+            _ => {
+                if cmd.starts_with("go") {
+                    let mov = if self.move_count % 2 == 0 { 
+                         if self.move_count % 4 == 0 { "b1a3" } else { "a3b1" }
+                    } else {
+                        if self.move_count % 4 == 1 { "b8a6" } else { "a6b8" }
+                    };
+                    self.output(format!("bestmove {}", mov));
+                } else if cmd.starts_with("position startpos moves") {
+                    // info!("parsing move list");
+                    let mut it = cmd.chars().skip(23).peekable();
+                    self.board = Board::new_start();
+                    self.move_count = 0;
+                    while let Some(mov) = Self::parse_move(&mut it) {
+                        // info!("  move {}", mov);
+                        self.board = self.board.apply(&mov).unwrap();
+                        self.move_count += 1;
+                    }
+                    info!("    final board {:?}", self.board);
+                } else {
+                    error!("unknown command {}", cmd);
+                }
+            }
+        }
+    }
+}
+
+fn engine_uci() {
+    use std::io;
+    use std::io::prelude::*;
+
+    let mut buffer = String::new();
+    let stdin = io::stdin();
+
+    let mut engine = Engine::new();
+
+    loop {
+        let mut handle = stdin.lock();
+        handle.read_line(&mut buffer).unwrap();
+        {
+            let cmd = buffer.trim_end();
+
+            info!("{:?}", cmd);
+            engine.process(cmd);
+        }
+        buffer.clear();
     }
 }
 

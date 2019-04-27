@@ -7,3 +7,5 @@ authors = ["theor <theo.richart@gmail.com>"]
 lazy_static = "1.3.0"
 bitflags = "1.0.4"
 galvanic-assert = "0.8.7"
+log = "*"
+simplelog = "*"

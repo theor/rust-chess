@@ -27,6 +27,17 @@ impl Case {
         Case(row * 8u8 + col)
     }
 
+    pub fn parse<I>(it: &mut I) -> Option<Case>
+    where
+        I: Iterator<Item = char>,
+    {
+        let fcx = it.next()?;
+        let fx = fcx as i8 - 'a' as i8;
+        let fy = it.next().unwrap().to_digit(10).unwrap();
+        let from = Case::new((fy - 1) as u8, fx as u8);
+        Some(from)
+    }
+
     pub fn try_offset(&self, row: i8, col: i8) -> Option<Self> {
         let nrow = self.row() as i8 + row;
         let ncol = self.col() as i8 + col;
@@ -131,6 +142,7 @@ pub fn generate_knight_moves(
         }
     }
 }
+
 pub fn generate_pawn_moves(
     color: Color,
     player: &PartialBoard,
@@ -138,7 +150,10 @@ pub fn generate_pawn_moves(
     moves: &mut Vec<GenMove>,
 ) {
     let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Pawn));
-    // let dir: i8 = color.map(1, -1);
+
+    // TODO en passant
+    // TODO promotion
+
     while let Some(piece) = pieces.next() {
         let cached_captures = color.map(PAWN_MOVES_WHITE_CAPTURES[piece.0 as usize], PAWN_MOVES_BLACK_CAPTURES[piece.0 as usize]);
         let mut cached_it = CaseIterator::new(cached_captures);
@@ -160,7 +175,6 @@ pub fn generate_pawn_moves(
                 }
             }
         }
-        // let dest = piece.offset(dir, 0);
     }
 }
 
@@ -246,21 +260,10 @@ mod tests {
     use galvanic_assert::matchers::collection::*;
     use galvanic_assert::matchers::*;
 
-    fn case<I>(it: &mut I) -> Option<Case>
-    where
-        I: Iterator<Item = char>,
-    {
-        let fcx = it.next().unwrap();
-        let fx = fcx as i8 - 'a' as i8;
-        let fy = it.next().unwrap().to_digit(10).unwrap();
-        let from = Case::new((fy - 1) as u8, fx as u8);
-        Some(from)
-    }
-
     fn m(s: &str) -> GenMove {
         assert!(s.len() == 4 || s.len() == 5);
         let mut chars = s.chars().peekable();
-        let from = case(&mut chars).unwrap();
+        let from = Case::parse(&mut chars).unwrap();
         let flags = match chars.peek() {
             Some('x') => {
                 chars.next();
@@ -268,13 +271,13 @@ mod tests {
             }
             _ => Flags::NONE,
         };
-        let to = case(&mut chars).unwrap();
+        let to = Case::parse(&mut chars).unwrap();
 
         GenMove::new(from, to, flags)
     }
 
     fn parse_case(s: &str) -> Case {
-        case(&mut s.chars()).unwrap()
+        Case::parse(&mut s.chars()).unwrap()
     }
 
     fn test_moves_f<F>(player: Color, setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>, f: F)
