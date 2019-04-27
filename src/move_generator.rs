@@ -194,6 +194,18 @@ mod tests {
         case(&mut s.chars()).unwrap()
     }
 
+    fn test_moves(setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>) {
+        let mut b = Board::empty();
+        for (c, p, case) in setup.iter() {
+            *b.get_pc_board_mut(*p, *c) |= parse_case(case).board();
+        }
+
+        let expected_moves = expected_moves.iter().map(|x| m(x));
+        let moves = generate_moves(&b, Color::White);
+        println!("{:#?}\n{} moves", moves, moves.len());
+        assert_that!(&moves, contains_in_any_order(expected_moves));
+    }
+
     #[test]
     fn case_iterator_empty() {
         let mut c = CaseIterator::new(0);
@@ -255,74 +267,27 @@ mod tests {
 
     #[test]
     fn genmoves_knight_white_center() {
-        let mut b = Board::empty();
-        b.white.knights = parse_case("d4").board();
-
-        let moves = generate_moves(&b, Color::White);
-        println!("{:#?}\n{} moves", moves, moves.len());
-        assert_that!(
-            &moves,
-            contains_in_any_order(vec![
-                m("d4b3"),
-                m("d4b5"),
-                m("d4c2"),
-                m("d4c6"),
-                m("d4e2"),
-                m("d4e6"),
-                m("d4f3"),
-                m("d4f5"),
-            ])
-        );
-    }
-
-    fn test_moves(
-        setup: Vec<(Color, Piece, &str)>,
-        expected_moves: Vec<&str>,
-    ){
-        let mut b = Board::empty();
-        for (c, p, case) in setup.iter() {
-            *b.get_pc_board_mut(*p, *c) |= parse_case(case).board();
-        }
-        
-        let moves = generate_moves(&b, Color::White);
-        println!("{:#?}\n{} moves", moves, moves.len());
-        assert_that!(
-            &moves,
-            contains_in_any_order(expected_moves.iter().map(m).collect())
-        );
+        test_moves(
+            vec![(Color::White, Piece::Knight, "d4")],
+            vec![
+                "d4b3", "d4b5", "d4c2", "d4c6", "d4e2", "d4e6", "d4f3", "d4f5",
+            ],
+        )
     }
 
     #[test]
     fn genmoves_knight_white_bottom_left() {
         test_moves(
             vec![(Color::White, Piece::Knight, "b2")],
-            vec!["b2c4", "b2d3", "b2d1", "b2a4",]
+            vec!["b2c4", "b2d3", "b2d1", "b2a4"],
         )
     }
 
     #[test]
-    fn genmoves_knight_white_bottom_left2() {
-        let mut b = Board::empty();
-        b.white.knights = parse_case("b2").board();
-
-        let moves = generate_moves(&b, Color::White);
-        println!("{:#?}\n{} moves", moves, moves.len());
-        assert_that!(
-            &moves,
-            contains_in_any_order(vec![m("b2c4"), m("b2d3"), m("b2d1"), m("b2a4"),])
-        );
-    }
-
-    #[test]
     fn genmoves_knight_white_top_right() {
-        let mut b = Board::empty();
-        b.white.knights = parse_case("g7").board();
-
-        let moves = generate_moves(&b, Color::White);
-        println!("{:#?}\n{} moves", moves, moves.len());
-        assert_that!(
-            &moves,
-            contains_in_any_order(vec![m("g7e6"), m("g7e8"), m("g7f5"), m("g7h5"),])
-        );
+        test_moves(
+            vec![(Color::White, Piece::Knight, "g7")],
+            vec!["g7e6", "g7e8", "g7f5", "g7h5"],
+        )
     }
 }
