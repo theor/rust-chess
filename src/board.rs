@@ -46,7 +46,7 @@ impl FromStr for Move {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let coords: Vec<&str> = s.trim_right().split(" ").collect();
+        let coords: Vec<&str> = s.trim_end().split(" ").collect();
 
         println!("{:?}", coords);
         let fcx = coords[0].parse::<char>().map_err(ParseError::CollError)?;
@@ -126,15 +126,15 @@ impl PartialBoard {
         }
     }
 
-     pub fn get_pc_board(&self, p: &Piece) -> u64 {
+     pub fn get_pc_board(&self, p: Piece) -> u64 {
         use crate::Piece::*;
         match p {
-            &Pawn => self.pawns,
-            &Knight => self.knights,
-            &Bishop => self.bishops,
-            &Rook => self.rooks,
-            &Queen => self.queens,
-            &King => self.king,
+            Pawn => self.pawns,
+            Knight => self.knights,
+            Bishop => self.bishops,
+            Rook => self.rooks,
+            Queen => self.queens,
+            King => self.king,
         }
     }
 
@@ -241,7 +241,7 @@ impl Board {
         self.get_player_board_mut(c).get_pc_board_mut(p)
     }
 
-    pub fn get_pc_board(&self, p: &Piece, c: Color) -> u64 {
+    pub fn get_pc_board(&self, p: Piece, c: Color) -> u64 {
         self.get_player_board(c).get_pc_board(p)
     }
     
@@ -280,7 +280,7 @@ impl Board {
         use crate::Color::*;
         for c in &[White, Black] {
             for p in &[Pawn, Knight, Bishop, Rook, Queen, King] {
-                let u = self.get_pc_board(p, *c);
+                let u = self.get_pc_board(*p, *c);
                 if Board::has(u, x, y) {
                     return Some((*p, *c));
                 }
