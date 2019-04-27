@@ -1,14 +1,21 @@
-mod board;
-mod player;
 mod ai;
-mod validator;
+mod board;
 mod move_generator;
+mod player;
+mod validator;
 
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate bitflags;
-#[macro_use] extern crate galvanic_assert;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate bitflags;
+
+#[cfg(test)]
+#[macro_use]
+extern crate galvanic_assert;
+
 
 use crate::board::*;
+use crate::validator::Validator;
 
 fn main() {
     use crate::player::Player;
@@ -34,7 +41,6 @@ fn main() {
         };
         let m = cur.get_move(color, &bo);
 
-        
         if let Some(newboard) = Validator::check_move(&bo, &m).and(bo.apply(&m)) {
             bo = newboard;
             t += 1;
@@ -49,173 +55,180 @@ fn main() {
     }
 }
 
-#[test]
-fn parse() {
-    //KQRBNP kqrbnp
-    let b = board::parse("rnbqkbnr
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::validator::MoveType::{Capture, Quiet};
+
+    #[test]
+    fn parse() {
+        //KQRBNP kqrbnp
+        let b = board::parse(
+            "rnbqkbnr
                           pppppppp
                           ________
                           ________
                           ________
                           ________
                           PPPPPPPP
-                          RNBQKBNR").unwrap();
-    println!("{}", b);
-    assert_eq!(Board::new_start(), b);
-}
+                          RNBQKBNR",
+        )
+        .unwrap();
+        println!("{}", b);
+        assert_eq!(Board::new_start(), b);
+    }
 
-#[test]
-fn has_empty() {
-    assert_eq!(false, Board::has(0b0, 0, 0));
-}
+    #[test]
+    fn has_empty() {
+        assert_eq!(false, Board::has(0b0, 0, 0));
+    }
 
-#[test]
-fn has_0_0() {
-    assert_eq!(true, Board::has(0x0000_0000_0000_0001u64, 0, 0));
-}
+    #[test]
+    fn has_0_0() {
+        assert_eq!(true, Board::has(0x0000_0000_0000_0001u64, 0, 0));
+    }
 
-#[test]
-fn has_1_0() {
-    assert_eq!(true, Board::has(0x0000_0000_0000_0002u64, 1, 0));
-}
+    #[test]
+    fn has_1_0() {
+        assert_eq!(true, Board::has(0x0000_0000_0000_0002u64, 1, 0));
+    }
 
-#[test]
-fn has_1_1() {
-    assert_eq!(true, Board::has(0x0000_0000_0000_0200u64, 1, 1));
-}
+    #[test]
+    fn has_1_1() {
+        assert_eq!(true, Board::has(0x0000_0000_0000_0200u64, 1, 1));
+    }
 
-#[test]
-fn it_works() {
-    let b = Board::new_start();
-    assert_eq!(true, b.color_at(Color::White, &Pos(0, 0)));
-}
-#[test]
-fn it_works2() {
-    let b = Board::new_start();
-    assert_eq!(false, b.color_at(Color::Black, &Pos(0, 0)));
-}
+    #[test]
+    fn it_works() {
+        let b = Board::new_start();
+        assert_eq!(true, b.color_at(Color::White, &Pos(0, 0)));
+    }
+    #[test]
+    fn it_works2() {
+        let b = Board::new_start();
+        assert_eq!(false, b.color_at(Color::Black, &Pos(0, 0)));
+    }
 
-#[test]
-fn move_bank() {
-    let b = Board::new_start();
-    println!("{}", b);
-}
+    #[test]
+    fn move_bank() {
+        let b = Board::new_start();
+        println!("{}", b);
+    }
 
-use crate::validator::Validator;
+    #[test]
+    fn validate_pawn_w_quiet_move1() {
+        let b = Board::new_start();
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(0, 1, 0, 2))
+        );
+    }
 
+    #[test]
+    fn validate_pawn_w_quiet_move2() {
+        let b = Board::new_start();
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(0, 1, 0, 3))
+        );
+    }
 
-#[test]
-fn validate_pawn_w_quiet_move1() {
-    let b = Board::new_start();
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(0, 1, 0, 2))
-    );
-}
+    #[test]
+    fn validate_pawn_w_invalid_too_far() {
+        let b = Board::new_start();
+        assert_eq!(None, Validator::check_move(&b, &Move::new(0, 1, 0, 4)));
+    }
 
-#[test]
-fn validate_pawn_w_quiet_move2() {
-    let b = Board::new_start();
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(0, 1, 0, 3))
-    );
-}
+    #[test]
+    fn validate_pawn_w_capture_enpassant() {
+        let b = Board::new_start();
+        let b = b.apply(&Move::new(2, 6, 1, 2)).unwrap();
+        assert_eq!(
+            Some(Capture),
+            Validator::check_move(&b, &Move::new(0, 1, 1, 2))
+        );
+    }
 
-#[test]
-fn validate_pawn_w_invalid_too_far() {
-    let b = Board::new_start();
-    assert_eq!(None, Validator::check_move(&b, &Move::new(0, 1, 0, 4)));
-}
+    #[test]
+    fn validate_pawn_w_invalid_quiet_enpassant() {
+        let b = Board::new_start();
+        assert_eq!(None, Validator::check_move(&b, &Move::new(0, 1, 1, 2)));
+    }
 
-#[test]
-fn validate_pawn_w_capture_enpassant() {
-    let b = Board::new_start();
-    let b = b.apply(&Move::new(2, 6, 1, 2)).unwrap();
-    assert_eq!(
-        Some(Capture),
-        Validator::check_move(&b, &Move::new(0, 1, 1, 2))
-    );
-}
+    // black pawn
 
-#[test]
-fn validate_pawn_w_invalid_quiet_enpassant() {
-    let b = Board::new_start();
-    assert_eq!(None, Validator::check_move(&b, &Move::new(0, 1, 1, 2)));
-}
+    #[test]
+    fn validate_pawn_b_quiet_move1() {
+        let b = Board::new_start();
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(0, 6, 0, 5))
+        );
+    }
 
-// black pawn
+    #[test]
+    fn validate_pawn_b_quiet_move2() {
+        let b = Board::new_start();
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(0, 6, 0, 4))
+        );
+    }
 
-#[test]
-fn validate_pawn_b_quiet_move1() {
-    let b = Board::new_start();
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(0, 6, 0, 5))
-    );
-}
+    #[test]
+    fn validate_pawn_b_invalid_too_far() {
+        let b = Board::new_start();
+        assert_eq!(None, Validator::check_move(&b, &Move::new(0, 6, 0, 3)));
+    }
 
-#[test]
-fn validate_pawn_b_quiet_move2() {
-    let b = Board::new_start();
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(0, 6, 0, 4))
-    );
-}
+    #[test]
+    fn validate_pawn_b_capture_enpassant() {
+        let b = Board::new_start();
+        let b = b.apply(&Move::new(2, 1, 1, 5)).unwrap();
+        assert_eq!(
+            Some(Capture),
+            Validator::check_move(&b, &Move::new(0, 6, 1, 5))
+        );
+    }
 
-#[test]
-fn validate_pawn_b_invalid_too_far() {
-    let b = Board::new_start();
-    assert_eq!(None, Validator::check_move(&b, &Move::new(0, 6, 0, 3)));
-}
+    #[test]
+    fn validate_pawn_b_invalid_quiet_enpassant() {
+        let b = Board::new_start();
+        assert_eq!(None, Validator::check_move(&b, &Move::new(0, 6, 1, 5)));
+    }
 
-#[test]
-fn validate_pawn_b_capture_enpassant() {
-    let b = Board::new_start();
-    let b = b.apply(&Move::new(2, 1, 1, 5)).unwrap();
-    assert_eq!(
-        Some(Capture),
-        Validator::check_move(&b, &Move::new(0, 6, 1, 5))
-    );
-}
+    #[test]
+    fn validate_knight() {
+        let b = Board::new_start();
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(1, 0, 0, 2))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(1, 0, 2, 2))
+        );
+        assert_eq!(None, Validator::check_move(&b, &Move::new(1, 0, 1, 2)));
 
-#[test]
-fn validate_pawn_b_invalid_quiet_enpassant() {
-    let b = Board::new_start();
-    assert_eq!(None, Validator::check_move(&b, &Move::new(0, 6, 1, 5)));
-}
+        let b2 = b.apply(&Move::new(2, 1, 2, 2)).unwrap();
+        println!("{}", b2);
+        assert_eq!(None, Validator::check_move(&b2, &Move::new(1, 0, 2, 2)));
 
-#[test]
-fn validate_knight() {
-    let b = Board::new_start();
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(1, 0, 0, 2))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(1, 0, 2, 2))
-    );
-    assert_eq!(None, Validator::check_move(&b, &Move::new(1, 0, 1, 2)));
+        let b3 = b.apply(&Move::new(2, 6, 2, 2)).unwrap();
+        println!("{}", b3);
+        assert_eq!(
+            Some(Capture),
+            Validator::check_move(&b3, &Move::new(1, 0, 2, 2))
+        );
+    }
 
-    let b2 = b.apply(&Move::new(2, 1, 2, 2)).unwrap();
-    println!("{}", b2);
-    assert_eq!(None, Validator::check_move(&b2, &Move::new(1, 0, 2, 2)));
+    // rook
 
-    let b3 = b.apply(&Move::new(2, 6, 2, 2)).unwrap();
-    println!("{}", b3);
-    assert_eq!(
-        Some(Capture),
-        Validator::check_move(&b3, &Move::new(1, 0, 2, 2))
-    );
-}
-
-// rook
-
-#[test]
-fn validate_rook_h_quiet() {
-    let b = board::parse("
+    #[test]
+    fn validate_rook_h_quiet() {
+        let b = board::parse(
+            "
 ________
 ________
 ________
@@ -223,34 +236,33 @@ ________
 ________
 __R_____
 ________
-________").unwrap();
-    println!("{}", b);
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 0, 2))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 2, 0))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 4, 2))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 2, 4))
-    );
-    assert_eq!(
-        None,
-        Validator::check_move(&b, &Move::new(2, 2, 4, 4))
-    );
-}
+________",
+        )
+        .unwrap();
+        println!("{}", b);
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 0, 2))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 2, 0))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 4, 2))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 2, 4))
+        );
+        assert_eq!(None, Validator::check_move(&b, &Move::new(2, 2, 4, 4)));
+    }
 
-#[test]
-fn validate_rook_obstacle() {
-    //KQRBNP kqrbnp
-    let s = "________
+    #[test]
+    fn validate_rook_obstacle() {
+        //KQRBNP kqrbnp
+        let s = "________
              ________
              ________
              ________
@@ -258,24 +270,21 @@ fn validate_rook_obstacle() {
              ________
              ________
              R_n_____";
-    let b = board::parse(s).unwrap();
-    println!("{}", b);
-    assert_eq!(
-        Some(Capture),
-        Validator::check_move(&b, &Move::new(0, 0, 2, 0))
-    );
-    assert_eq!(
-        None,
-        Validator::check_move(&b, &Move::new(0, 0, 3, 0))
-    );
-}
+        let b = board::parse(s).unwrap();
+        println!("{}", b);
+        assert_eq!(
+            Some(Capture),
+            Validator::check_move(&b, &Move::new(0, 0, 2, 0))
+        );
+        assert_eq!(None, Validator::check_move(&b, &Move::new(0, 0, 3, 0)));
+    }
 
-// Bishop
+    // Bishop
 
-#[test]
-fn validate_bishop_quiet() {
-    //KQRBNP kqrbnp
-    let s = "
+    #[test]
+    fn validate_bishop_quiet() {
+        //KQRBNP kqrbnp
+        let s = "
 ________
 ________
 ________
@@ -284,48 +293,46 @@ ________
 __b_____
 ________
 ________";
-    let b = board::parse(s).unwrap();
-    println!("{}", b);
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 0, 0))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 3, 3))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 3, 1))
-    );
-    assert_eq!(
-        Some(Quiet),
-        Validator::check_move(&b, &Move::new(2, 2, 0, 4))
-    );
-    assert_eq!(
-        None,
-        Validator::check_move(&b, &Move::new(2, 2, 4, 5))
-    );
-}
+        let b = board::parse(s).unwrap();
+        println!("{}", b);
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 0, 0))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 3, 3))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 3, 1))
+        );
+        assert_eq!(
+            Some(Quiet),
+            Validator::check_move(&b, &Move::new(2, 2, 0, 4))
+        );
+        assert_eq!(None, Validator::check_move(&b, &Move::new(2, 2, 4, 5)));
+    }
 
-#[test]
-fn validate_bishop_capture() {
-    //KQRBNP kqrbnp
-    let b = board::parse("________
+    #[test]
+    fn validate_bishop_capture() {
+        //KQRBNP kqrbnp
+        let b = board::parse(
+            "________
                           ________
                           ________
                           ____N___
                           ________
                           __b_____
                           ________
-                          ________").unwrap();
-    println!("{}", b);
-    assert_eq!(
-        Some(Capture),
-        Validator::check_move(&b, &Move::new(2, 2, 4, 4))
-    );
-    assert_eq!(
-        None,
-        Validator::check_move(&b, &Move::new(2, 2, 5, 5))
-    );
+                          ________",
+        )
+        .unwrap();
+        println!("{}", b);
+        assert_eq!(
+            Some(Capture),
+            Validator::check_move(&b, &Move::new(2, 2, 4, 4))
+        );
+        assert_eq!(None, Validator::check_move(&b, &Move::new(2, 2, 5, 5)));
+    }
 }

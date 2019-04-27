@@ -26,7 +26,6 @@ impl Player for IOPlayer {
             }
             buffer.clear();
         }
-        unreachable!()
     }
 }
 
