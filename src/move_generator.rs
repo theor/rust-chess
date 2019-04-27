@@ -114,9 +114,18 @@ pub fn generate_knight_moves(
     while let Some(piece) = pieces.next() {
         let mut moves_it = CaseIterator::new(KNIGHT_MOVES[piece.0 as usize]);
         while let Some(dest) = moves_it.next() {
-            println!("check\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}", player.all(), dest.board(), player.all() & dest.board());
+            println!(
+                "check\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
+                player.all(),
+                dest.board(),
+                player.all() & dest.board()
+            );
             if player.all() & dest.board() == 0 {
-                let flags = if other.all() & dest.board() == 0 { Flags::NONE } else { Flags::CAPTURE };
+                let flags = if other.all() & dest.board() == 0 {
+                    Flags::NONE
+                } else {
+                    Flags::CAPTURE
+                };
                 moves.push(GenMove::new(piece, dest, flags));
             }
         }
@@ -129,11 +138,14 @@ pub fn generate_pawn_moves(
     moves: &mut Vec<GenMove>,
 ) {
     let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Pawn));
-    let dir: i8 = color.map(1, -1);
+    // let dir: i8 = color.map(1, -1);
     while let Some(piece) = pieces.next() {
-        let dest = piece.offset(dir, 0);
-
-        moves.push(GenMove::new(piece, dest, Flags::NONE))
+        let cached = color.map(PAWN_MOVES_WHITE[piece.0 as usize], PAWN_MOVES_BLACK[piece.0 as usize]);
+        let mut cached_it = CaseIterator::new(cached);
+        while let Some(mov) = cached_it.next() {
+            moves.push(GenMove::new(piece, mov, Flags::NONE))
+        }
+        // let dest = piece.offset(dir, 0);
     }
 }
 
@@ -156,7 +168,34 @@ pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     moves
 }
 
+fn generate_white_pawn_boards() -> [u64; 64] {
+    let mut a = [0u64; 64];
+    for c in 0..64 {
+        let case: Case = c.into();
+        match case.row() {
+            0 | 7 => continue,
+            1 => a[c as usize] = case.offset(1, 0).board() | case.offset(2, 0).board(),
+            _ => a[c as usize] = case.offset(1, 0).board(),
+        }
+    }
+    a
+}
+fn generate_black_pawn_boards() -> [u64; 64] {
+    let mut a = [0u64; 64];
+    for c in 0..64 {
+        let case: Case = c.into();
+        match case.row() {
+            0 | 7 => continue,
+            6 => a[c as usize] = case.offset(-1, 0).board() | case.offset(-2, 0).board(),
+            _ => a[c as usize] = case.offset(-1, 0).board(),
+        }
+    }
+    a
+}
+
 lazy_static! {
+    static ref PAWN_MOVES_WHITE: [u64; 64] = generate_white_pawn_boards();
+    static ref PAWN_MOVES_BLACK: [u64; 64] = generate_black_pawn_boards();
     static ref KNIGHT_MOVES: [u64; 64] = {
         let mut a = [0u64; 64];
         for c in 0..64 {
@@ -189,7 +228,9 @@ mod tests {
     use galvanic_assert::matchers::*;
 
     fn case<I>(it: &mut I) -> Option<Case>
-    where I: Iterator<Item=char> {
+    where
+        I: Iterator<Item = char>,
+    {
         let fcx = it.next().unwrap();
         let fx = fcx as i8 - 'a' as i8;
         let fy = it.next().unwrap().to_digit(10).unwrap();
@@ -202,7 +243,10 @@ mod tests {
         let mut chars = s.chars().peekable();
         let from = case(&mut chars).unwrap();
         let flags = match chars.peek() {
-            Some('x') => { chars.next(); Flags::CAPTURE },
+            Some('x') => {
+                chars.next();
+                Flags::CAPTURE
+            }
             _ => Flags::NONE,
         };
         let to = case(&mut chars).unwrap();
