@@ -3,6 +3,7 @@ mod board;
 mod move_generator;
 mod player;
 mod validator;
+mod evaluate;
 
 #[macro_use]
 extern crate lazy_static;

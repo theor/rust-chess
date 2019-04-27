@@ -203,6 +203,13 @@ impl Board {
         }
     }
 
+    pub fn color(&self, color: Color) -> &PartialBoard {
+        match color {
+            Color::White => &self.white,
+            Color::Black => &self.black,
+        }
+    }
+
     pub fn all(&self) -> u64 {
         self.white.all() | self.black.all()
     }

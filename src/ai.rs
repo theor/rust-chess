@@ -1,10 +1,12 @@
 use crate::board::*;
 use crate::move_generator::*;
 use crate::player::Player;
+use crate::evaluate::*;
 use rand::rngs::SmallRng;
 
 pub struct AiPlayer {
     rng: SmallRng,
+    eval: Box<Evaluator>,
 }
 
 impl AiPlayer {
@@ -13,17 +15,19 @@ impl AiPlayer {
         // Create small, cheap to initialize and fast RNG with a random seed.
         // The randomness is supplied by the operating system.
         let small_rng = SmallRng::from_seed(seed);
-        AiPlayer { rng: small_rng, }
+        AiPlayer { rng: small_rng, eval: Box::new(BasicEvaluator) }
     }
 }
 
 impl Player for AiPlayer {
     fn get_move(&mut self, c: Color, b: &Board) -> Move {
         use rand::prelude::SliceRandom;
-        let moves = generate_moves(b, c);
+        let mut moves = generate_moves(b, c).iter().map(|m| (m.clone(), self.eval.evaluate(&b.apply(&m.clone().into()).unwrap(), c))).collect::<Vec<(GenMove, i32)>>();
+        moves.sort_by_key(|x| x.1);
         info!("all {} moves {:?}", moves.len(), moves);
-        let m = moves.choose(&mut self.rng).cloned().unwrap();
-        m.into()
+        moves.iter().next().cloned().unwrap().0.into()
+        // let m = moves.choose(&mut self.rng).cloned().unwrap();
+        // m.into()
     }
 }
 
