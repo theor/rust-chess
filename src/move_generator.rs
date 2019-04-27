@@ -73,7 +73,7 @@ impl Into<Case> for u8 {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct GenMove {
     from: Case,
     to: Case,
@@ -83,6 +83,17 @@ pub struct GenMove {
 impl GenMove {
     pub fn new(from: Case, to: Case, flags: Flags) -> Self {
         GenMove { from, to, flags }
+    }
+}
+
+impl Into<Move> for GenMove {
+    fn into(self) -> Move {
+        Move::new(
+            self.from.col(),
+            self.from.row(),
+            self.to.col(),
+            self.to.row(),
+        )
     }
 }
 
@@ -96,13 +107,13 @@ impl CaseIterator {
         Self { bitboard, last: -1 }
     }
     fn next(&mut self) -> Option<Case> {
-        println!("last: {}", self.last);
+        debug!("last: {}", self.last);
         if self.last >= 64 {
-            println!("  end");
+            debug!("  end");
             None
         } else {
             let t = self.bitboard.trailing_zeros();
-            println!("  trailing_zeros {}", t);
+            debug!("  trailing_zeros {}", t);
             if t == 64 {
                 self.last = 64;
                 None
@@ -125,7 +136,7 @@ pub fn generate_knight_moves(
     while let Some(piece) = pieces.next() {
         let mut moves_it = CaseIterator::new(KNIGHT_MOVES[piece.0 as usize]);
         while let Some(dest) = moves_it.next() {
-            println!(
+            debug!(
                 "check\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
                 player.all(),
                 dest.board(),
@@ -155,22 +166,35 @@ pub fn generate_pawn_moves(
     // TODO promotion
 
     while let Some(piece) = pieces.next() {
-        let cached_captures = color.map(PAWN_MOVES_WHITE_CAPTURES[piece.0 as usize], PAWN_MOVES_BLACK_CAPTURES[piece.0 as usize]);
-        let mut cached_it = CaseIterator::new(cached_captures);
         let mut capture = false;
-        println!("cached captures {:#064b}", cached_captures);
+
+        let cached_captures = color.map(
+            PAWN_MOVES_WHITE_CAPTURES[piece.0 as usize],
+            PAWN_MOVES_BLACK_CAPTURES[piece.0 as usize],
+        );
+        let mut cached_it = CaseIterator::new(cached_captures);
+        info!("cached captures {:#064b}", cached_captures);
         while let Some(dest) = cached_it.next() {
-            println!("check pawn {:?}\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}", dest, dest.board(), other.all(), other.all() & dest.board());
+            info!(
+                "check pawn {:?}\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
+                dest,
+                dest.board(),
+                other.all(),
+                other.all() & dest.board()
+            );
             if other.all() & dest.board() != 0 {
                 moves.push(GenMove::new(piece, dest, Flags::CAPTURE));
                 capture = true;
             }
         }
         if !capture {
-            let cached = color.map(PAWN_MOVES_WHITE[piece.0 as usize], PAWN_MOVES_BLACK[piece.0 as usize]);
+            let cached = color.map(
+                PAWN_MOVES_WHITE[piece.0 as usize],
+                PAWN_MOVES_BLACK[piece.0 as usize],
+            );
             let mut cached_it = CaseIterator::new(cached);
             while let Some(dest) = cached_it.next() {
-                if player.all() & dest.board() == 0 {
+                if player.all() & dest.board() == 0 && other.all() & dest.board() == 0 {
                     moves.push(GenMove::new(piece, dest, Flags::NONE))
                 }
             }
@@ -197,13 +221,15 @@ pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
     moves
 }
 
-fn generate_pawn_boards(row_double:u8, factor: i8) -> [u64; 64] {
+fn generate_pawn_boards(row_double: u8, factor: i8) -> [u64; 64] {
     let mut a = [0u64; 64];
     for c in 0..64 {
         let case: Case = c.into();
         match case.row() {
             0 | 7 => continue,
-            x if x == row_double => a[c as usize] = case.offset(factor, 0).board() | case.offset(2 * factor, 0).board(),
+            x if x == row_double => {
+                a[c as usize] = case.offset(factor, 0).board() | case.offset(2 * factor, 0).board()
+            }
             _ => a[c as usize] = case.offset(factor, 0).board(),
         }
     }
@@ -215,9 +241,13 @@ fn generate_pawn_boards_capture(factor: i8) -> [u64; 64] {
         let case: Case = c.into();
         match case.row() {
             1...6 => {
-                if case.col() < 7 { a[c as usize] |= case.offset(factor, 1).board(); }
-                if case.col() > 0 { a[c as usize] |= case.offset(factor, -1).board(); }
-            },
+                if case.col() < 7 {
+                    a[c as usize] |= case.offset(factor, 1).board();
+                }
+                if case.col() > 0 {
+                    a[c as usize] |= case.offset(factor, -1).board();
+                }
+            }
             _ => continue,
         }
     }
@@ -280,8 +310,12 @@ mod tests {
         Case::parse(&mut s.chars()).unwrap()
     }
 
-    fn test_moves_f<F>(player: Color, setup: Vec<(Color, Piece, &str)>, expected_moves: Vec<&str>, f: F)
-    where
+    fn test_moves_f<F>(
+        player: Color,
+        setup: Vec<(Color, Piece, &str)>,
+        expected_moves: Vec<&str>,
+        f: F,
+    ) where
         F: Fn(Color, &PartialBoard, &PartialBoard, &mut Vec<GenMove>),
     {
         let mut b = Board::empty();
@@ -293,7 +327,7 @@ mod tests {
         let mut moves = Vec::new();
         let (this, other) = (b.get_player_board(player), b.get_player_board(!player));
         f(player, &this, &other, &mut moves);
-        println!("{:#?}\n{} moves", moves, moves.len());
+        debug!("{:#?}\n{} moves", moves, moves.len());
         assert_that!(&moves.len(), eq(expected_moves.len()));
         assert_that!(&moves, contains_in_any_order(expected_moves));
     }
@@ -345,7 +379,7 @@ mod tests {
     fn genmoves_start() {
         let b = Board::new_start();
         let moves = generate_moves(&b, Color::White);
-        println!("{:#?}\n{} moves", moves, moves.len());
+        debug!("{:#?}\n{} moves", moves, moves.len());
     }
 
     #[test]
@@ -358,7 +392,7 @@ mod tests {
             black: PartialBoard::empty(),
         };
         let moves = generate_moves(&b, Color::White);
-        println!("{:#?}\n{} moves", moves, moves.len());
+        debug!("{:#?}\n{} moves", moves, moves.len());
     }
 
     #[test]
@@ -441,4 +475,14 @@ mod tests {
             generate_pawn_moves,
         )
     }
+
+    #[test]
+    fn debug_illegalmove_e5d4() {
+        let fen = "r1bqkbnr/pp6/2n3p1/3ppp1p/2Pp1P1P/1P4P1/P1N1P3/R1BQKBNR b KQkq - 1 12";
+        let b = parse_fen(fen).unwrap();
+        println!("{:#?}", generate_moves(&b, Color::Black));
+    }
+
+    // to test: illegal black d5d4
+    // r1bqkbnr/pp6/2n3p1/3ppp1p/2Pp1P1P/1P4P1/P1N1P3/R1BQKBNR b KQkq - 1 12
 }

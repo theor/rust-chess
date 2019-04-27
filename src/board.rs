@@ -216,6 +216,12 @@ impl Board {
         {
             let from = new.get_pc_board_mut(p, c);
             Board::unset(from, x, y);
+        }
+        {
+            if let Some((cp, cc)) = new.at(tx, ty) {
+                Board::unset(new.get_pc_board_mut(cp, cc), tx, ty);
+            }
+            let from = new.get_pc_board_mut(p, c);
             Board::set(from, tx, ty);
         }
         Some(new)
@@ -341,21 +347,76 @@ impl fmt::Display for Board {
         self.fmt_f(f, &|a, f| match a {
             None => write!(f, "{}", " ").unwrap(),
 
-            Some((Pawn, White)) => write!(f, "{}", "\u{2659}").unwrap(),
-            Some((Knight, White)) => write!(f, "{}", "\u{2658}").unwrap(),
-            Some((Bishop, White)) => write!(f, "{}", "\u{2657}").unwrap(),
-            Some((Rook, White)) => write!(f, "{}", "\u{2656}").unwrap(),
-            Some((Queen, White)) => write!(f, "{}", "\u{2655}").unwrap(),
-            Some((King, White)) => write!(f, "{}", "\u{2654}").unwrap(),
+            Some((Pawn, Black)) => write!(f, "{}", "\u{2659}").unwrap(),
+            Some((Knight, Black)) => write!(f, "{}", "\u{2658}").unwrap(),
+            Some((Bishop, Black)) => write!(f, "{}", "\u{2657}").unwrap(),
+            Some((Rook, Black)) => write!(f, "{}", "\u{2656}").unwrap(),
+            Some((Queen, Black)) => write!(f, "{}", "\u{2655}").unwrap(),
+            Some((King, Black)) => write!(f, "{}", "\u{2654}").unwrap(),
 
-            Some((Pawn, Black)) => write!(f, "{}", "\u{265F}").unwrap(),
-            Some((Knight, Black)) => write!(f, "{}", "\u{265E}").unwrap(),
-            Some((Bishop, Black)) => write!(f, "{}", "\u{265D}").unwrap(),
-            Some((Rook, Black)) => write!(f, "{}", "\u{265C}").unwrap(),
-            Some((Queen, Black)) => write!(f, "{}", "\u{265B}").unwrap(),
-            Some((King, Black)) => write!(f, "{}", "\u{265A}").unwrap(),
+            Some((Pawn, White)) => write!(f, "{}", "\u{265F}").unwrap(),
+            Some((Knight, White)) => write!(f, "{}", "\u{265E}").unwrap(),
+            Some((Bishop, White)) => write!(f, "{}", "\u{265D}").unwrap(),
+            Some((Rook, White)) => write!(f, "{}", "\u{265C}").unwrap(),
+            Some((Queen, White)) => write!(f, "{}", "\u{265B}").unwrap(),
+            Some((King, White)) => write!(f, "{}", "\u{265A}").unwrap(),
         })
     }
+}
+
+pub fn parse_fen(s: &str) -> Option<Board> {
+    let (mut r, mut c) = (7, 0);
+    let mut it = s.chars().peekable();
+
+    let mut b = Board::empty();
+
+    use Color::*;
+    use Piece::*;
+
+    fn set(b: &mut Board, p: Piece, c: Color, col: &mut u8, row: u8) {
+        println!("  set {:?} {:?} at {} {}", c, p, col, row);
+        Board::set(b.get_pc_board_mut(p, c), *col, row);
+        *col += 1;
+    }
+
+    while let Some(ch) = it.next() {
+        println!("    char {}", ch);
+        match ch {
+            '/' => {
+                r -= 1;
+                c = 0;
+                println!("LINE {}", r);
+            }
+            ' ' => break,
+            'k' => set(&mut b, King, Black, &mut c, r),
+            'q' => set(&mut b, Queen, Black, &mut c, r),
+            'r' => set(&mut b, Rook, Black, &mut c, r),
+            'b' => set(&mut b, Bishop, Black, &mut c, r),
+            'n' => set(&mut b, Knight, Black, &mut c, r),
+            'p' => set(&mut b, Pawn, Black, &mut c, r),
+            'K' => set(&mut b, King, White, &mut c, r),
+            'Q' => set(&mut b, Queen, White, &mut c, r),
+            'R' => set(&mut b, Rook, White, &mut c, r),
+            'B' => set(&mut b, Bishop, White, &mut c, r),
+            'N' => set(&mut b, Knight, White, &mut c, r),
+            'P' => set(&mut b, Pawn, White, &mut c, r),
+            d if d.is_digit(10) => {
+                let skip = d.to_digit(10).unwrap() as u8;
+                println!("  skip {}", skip);
+                c += skip;
+            }
+            _ => panic!("wtf"),
+        }
+    }
+
+    Some(b)
+}
+
+#[test]
+fn test_fen() {
+    let fen = "r1bqkbnr/pp6/2n3p1/3ppp1p/2Pp1P1P/1P4P1/P1N1P3/R1BQKBNR b KQkq - 1 12";
+    let b = parse_fen(fen).unwrap();
+    println!("{}", b);
 }
 
 pub fn parse(s: &str) -> Option<Board> {

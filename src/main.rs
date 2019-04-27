@@ -7,6 +7,8 @@ mod validator;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate rand;
+
 #[macro_use]
 extern crate log;
 extern crate simplelog;
@@ -17,6 +19,7 @@ extern crate bitflags;
 #[macro_use]
 extern crate galvanic_assert;
 
+use player::Player;
 use crate::board::*;
 use crate::validator::Validator;
 
@@ -55,8 +58,8 @@ fn main() {
 
     use crate::player::Player;
     let mut bo = Board::new_start();
-    let w = player::IOPlayer {};
-    let b = player::SeqPlayer {};
+    let mut w = player::IOPlayer {};
+    let mut b = player::SeqPlayer {};
 
     let mut t = 0usize;
 
@@ -69,10 +72,10 @@ fn main() {
     println!("size of board: {} bytes", std::mem::size_of::<Board>());
     println!("{}", bo);
     loop {
-        let (cur, color): (&Player, Color) = if t % 2 == 0 {
-            (&w, Color::White)
+        let (cur, color): (&mut Player, Color) = if t % 2 == 0 {
+            (&mut w, Color::White)
         } else {
-            (&b, Color::Black)
+            (&mut b, Color::Black)
         };
         let m = cur.get_move(color, &bo);
 
@@ -92,6 +95,7 @@ fn main() {
 
 struct Engine {
     board: Board,
+    ai: crate::ai::AiPlayer,
     move_count: usize,
 }
 
@@ -99,6 +103,7 @@ impl Engine {
     pub fn new() -> Self {
         Engine {
             board: Board::empty(),
+            ai: crate::ai::AiPlayer::new([42,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,]),
             move_count: 0,
         }
     }
@@ -138,11 +143,13 @@ impl Engine {
             "position fen <FEN>" => unimplemented!(),               // reset position
             _ => {
                 if cmd.starts_with("go") {
-                    let mov = if self.move_count % 2 == 0 { 
-                         if self.move_count % 4 == 0 { "b1a3" } else { "a3b1" }
-                    } else {
-                        if self.move_count % 4 == 1 { "b8a6" } else { "a6b8" }
-                    };
+                    let color = if self.move_count % 2 == 0 { Color::White } else { Color::Black };
+                    let mov = self.ai.get_move(color, &self.board);
+                    //  if self.move_count % 2 == 0 { 
+                    //      if self.move_count % 4 == 0 { "b1a3" } else { "a3b1" }
+                    // } else {
+                    //     if self.move_count % 4 == 1 { "b8a6" } else { "a6b8" }
+                    // };
                     self.output(format!("bestmove {}", mov));
                 } else if cmd.starts_with("position startpos moves") {
                     // info!("parsing move list");
@@ -154,7 +161,7 @@ impl Engine {
                         self.board = self.board.apply(&mov).unwrap();
                         self.move_count += 1;
                     }
-                    info!("    final board {:?}", self.board);
+                    info!("    final board\r\n {}", self.board);
                 } else {
                     error!("unknown command {}", cmd);
                 }
