@@ -371,9 +371,11 @@ impl fmt::Display for Board {
     }
 }
 
-pub fn parse_fen(s: &str) -> Option<Board> {
+pub fn parse_fen_color<I>(it: &mut I) -> Option<(Board, Color)>
+where
+    I: Iterator<Item = char>,
+{
     let (mut r, mut c) = (7, 0);
-    let mut it = s.chars().peekable();
 
     let mut b = Board::empty();
 
@@ -381,18 +383,18 @@ pub fn parse_fen(s: &str) -> Option<Board> {
     use Piece::*;
 
     fn set(b: &mut Board, p: Piece, c: Color, col: &mut u8, row: u8) {
-        println!("  set {:?} {:?} at {} {}", c, p, col, row);
+        // println!("  set {:?} {:?} at {} {}", c, p, col, row);
         Board::set(b.get_pc_board_mut(p, c), *col, row);
         *col += 1;
     }
 
     while let Some(ch) = it.next() {
-        println!("    char {}", ch);
+        // println!("    char {}", ch);
         match ch {
             '/' => {
                 r -= 1;
                 c = 0;
-                println!("LINE {}", r);
+                // println!("LINE {}", r);
             }
             ' ' => break,
             'k' => set(&mut b, King, Black, &mut c, r),
@@ -409,14 +411,23 @@ pub fn parse_fen(s: &str) -> Option<Board> {
             'P' => set(&mut b, Pawn, White, &mut c, r),
             d if d.is_digit(10) => {
                 let skip = d.to_digit(10).unwrap() as u8;
-                println!("  skip {}", skip);
+                // println!("  skip {}", skip);
                 c += skip;
             }
             _ => panic!("wtf"),
         }
     }
 
-    Some(b)
+    let c = match it.next() {
+        Some('b') => Color::Black,
+        _ => Color::White,
+    };
+
+    Some((b, c))
+}
+pub fn parse_fen(s: &str) -> Option<Board> {
+    let mut it = s.chars().peekable();
+    parse_fen_color(&mut it).map(|x| x.0)
 }
 
 #[test]

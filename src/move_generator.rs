@@ -8,6 +8,7 @@ bitflags! {
         const CASTLE = 0b00000010;
         const DOUBLE_STEP = 0b00000100;
         const CAPTURE = 0b1000;
+        const PROMOTION = 0b10000;
         // const ABC = Self::A.bits | Self::B.bits | Self::C.bits;
     }
 }
@@ -198,7 +199,14 @@ pub fn generate_pawn_moves(
 
             for dest in CaseIterator::new(cached) {
                 if player.all() & dest.board() == 0 && other.all() & dest.board() == 0 {
-                    moves.push(GenMove::new(piece, dest, Flags::NONE))
+                    let f = if (color == Color::White && dest.row() == 7)
+                        || (color == Color::Black && dest.row() == 0)
+                    {
+                        Flags::PROMOTION
+                    } else {
+                        Flags::NONE
+                    };
+                    moves.push(GenMove::new(piece, dest, f))
                 }
             }
         }
@@ -275,8 +283,16 @@ pub fn generate_queen_moves(
         player,
         other,
         moves,
-        &[(1, 1), (-1, 1), (1, -1), (-1, -1),
-          (1, 0), (-1, 0), (0, 1), (0, -1)],
+        &[
+            (1, 1),
+            (-1, 1),
+            (1, -1),
+            (-1, -1),
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+        ],
         false,
     )
 }
@@ -288,12 +304,20 @@ pub fn generate_king_moves(
     moves: &mut Vec<GenMove>,
 ) {
     generate_sliding_moves(
-        player.queens,
+        player.king,
         player,
         other,
         moves,
-        &[(1, 1), (-1, 1), (1, -1), (-1, -1),
-          (1, 0), (-1, 0), (0, 1), (0, -1)],
+        &[
+            (1, 1),
+            (-1, 1),
+            (1, -1),
+            (-1, -1),
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+        ],
         true,
     )
 }

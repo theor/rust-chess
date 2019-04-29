@@ -16,6 +16,9 @@ extern crate simplelog;
 #[macro_use]
 extern crate bitflags;
 
+extern crate clap;
+use clap::{App, Arg, SubCommand};
+
 #[cfg(test)]
 #[macro_use]
 extern crate galvanic_assert;
@@ -29,19 +32,45 @@ fn main() {
     use std::env;
     use std::fs::File;
 
-    let mut uci = true;
-    let mut i = "_d".to_owned();
-    // Prints each argument on a separate line
+    println!("args {:?}", env::args());
 
-    for argument in env::args().skip(1) {
-        if argument == "i" {
-            uci = false;
-        } else {
-            i = argument.to_owned();
-        }
-    }
+    let args = App::new("chess")
+        .version("1.0")
+        .arg(
+            Arg::with_name("log")
+                .short("l")
+                .long("log")
+                .value_name("FILE")
+                .help("Sets a custom log file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("interactive")
+                .short("i")
+                .long("interactive")
+                .help("interactive mode")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("fen")
+                .short("f")
+                .long("fen")
+                .help("fen string")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("next-move")
+                .short("n")
+                .help("compute next move")
+        )
+        .get_matches();
 
-    let path = format!("C:\\Users\\theor\\rust-chess\\my_rust_binary{}.log", i);
+    let uci = !args.is_present("interactive");
+    let logfile = args.value_of("log").unwrap_or("chess");
+    println!("args {:?}", args);
+    println!("fen {:?}", args.value_of("fen"));
+
+    let path = format!("C:\\Users\\theor\\rust-chess\\{}.log", logfile);
     CombinedLogger::init(vec![
         TermLogger::new(LevelFilter::Debug, Config::default()).unwrap(),
         WriteLogger::new(
@@ -55,13 +84,13 @@ fn main() {
     use std::panic;
 
     panic::set_hook(Box::new(|p| {
-        let backtrace =  backtrace::Backtrace::new();
+        let backtrace = backtrace::Backtrace::new();
 
         error!("{}\r\n{:?}", p, backtrace);
     }));
 
     if uci {
-        engine_uci();
+        engine_uci(args.is_present("next-move"), args.value_of("fen"));
         return;
     }
 
@@ -183,9 +212,19 @@ impl Engine {
     }
 }
 
-fn engine_uci() {
+fn engine_uci(next_move: bool, fen: Option<&str>) {
     use std::io;
     use std::io::prelude::*;
+
+    if next_move {
+        let (b, c): (Board, Color) = fen
+        .and_then(|s| board::parse_fen_color(&mut s.chars()))
+        .unwrap_or_else(|| (Board::empty(), Color::White));
+        println!("start color: {:?}\r\n{}", c, b);
+        let mut ai = ai::AiPlayer::new([42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        println!("next: {}",ai.get_move(c, &b));
+        return;
+    }
 
     let mut buffer = String::new();
     let stdin = io::stdin();
