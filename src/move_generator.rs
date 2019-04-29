@@ -102,10 +102,8 @@ struct CaseIterator {
     last: i8,
 }
 
-impl CaseIterator {
-    pub fn new(bitboard: u64) -> Self {
-        Self { bitboard, last: -1 }
-    }
+impl Iterator for CaseIterator {
+    type Item = Case;
     fn next(&mut self) -> Option<Case> {
         debug!("last: {}", self.last);
         if self.last >= 64 {
@@ -117,6 +115,9 @@ impl CaseIterator {
             if t == 64 {
                 self.last = 64;
                 None
+            } else if t == 63 {
+                self.last = 64;
+                 Some(Case(63))
             } else {
                 self.bitboard = self.bitboard >> (t + 1);
                 self.last += t as i8 + 1;
@@ -126,22 +127,26 @@ impl CaseIterator {
     }
 }
 
+impl CaseIterator {
+    pub fn new(bitboard: u64) -> Self {
+        Self { bitboard, last: -1 }
+    }
+}
+
 pub fn generate_knight_moves(
     color: Color,
     player: &PartialBoard,
     other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
-    let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Knight));
-    while let Some(piece) = pieces.next() {
-        let mut moves_it = CaseIterator::new(KNIGHT_MOVES[piece.0 as usize]);
-        while let Some(dest) = moves_it.next() {
-            debug!(
-                "check\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
-                player.all(),
-                dest.board(),
-                player.all() & dest.board()
-            );
+    for piece in CaseIterator::new(player.get_pc_board(Piece::Knight)) {
+        for dest in CaseIterator::new(KNIGHT_MOVES[piece.0 as usize]) {
+            // debug!(
+            //     "check\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
+            //     player.all(),
+            //     dest.board(),
+            //     player.all() & dest.board()
+            // );
             if player.all() & dest.board() == 0 {
                 let flags = if other.all() & dest.board() == 0 {
                     Flags::NONE
@@ -160,28 +165,26 @@ pub fn generate_pawn_moves(
     other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
-    let mut pieces = CaseIterator::new(player.get_pc_board(Piece::Pawn));
-
     // TODO en passant
     // TODO promotion
 
-    while let Some(piece) = pieces.next() {
+    for piece in CaseIterator::new(player.get_pc_board(Piece::Pawn)) {
         let mut capture = false;
 
         let cached_captures = color.map(
             PAWN_MOVES_WHITE_CAPTURES[piece.0 as usize],
             PAWN_MOVES_BLACK_CAPTURES[piece.0 as usize],
         );
-        let mut cached_it = CaseIterator::new(cached_captures);
-        info!("cached captures {:#064b}", cached_captures);
-        while let Some(dest) = cached_it.next() {
-            info!(
-                "check pawn {:?}\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
-                dest,
-                dest.board(),
-                other.all(),
-                other.all() & dest.board()
-            );
+        
+        // info!("cached captures {:#064b}", cached_captures);
+        for dest in CaseIterator::new(cached_captures) {
+            // info!(
+            //     "check pawn {:?}\r\n\t{:#064b}\r\n\t{:#064b}\r\n\t{:#064b}",
+            //     dest,
+            //     dest.board(),
+            //     other.all(),
+            //     other.all() & dest.board()
+            // );
             if other.all() & dest.board() != 0 {
                 moves.push(GenMove::new(piece, dest, Flags::CAPTURE));
                 capture = true;
@@ -192,11 +195,34 @@ pub fn generate_pawn_moves(
                 PAWN_MOVES_WHITE[piece.0 as usize],
                 PAWN_MOVES_BLACK[piece.0 as usize],
             );
-            let mut cached_it = CaseIterator::new(cached);
-            while let Some(dest) = cached_it.next() {
+            
+            for dest in CaseIterator::new(cached) {
                 if player.all() & dest.board() == 0 && other.all() & dest.board() == 0 {
                     moves.push(GenMove::new(piece, dest, Flags::NONE))
                 }
+            }
+        }
+    }
+}
+
+pub fn generate_rook_moves(
+    color: Color,
+    player: &PartialBoard,
+    other: &PartialBoard,
+    moves: &mut Vec<GenMove>,
+) {
+    for rook in CaseIterator::new(player.rooks) {
+        for offset in &[(1,0), (-1,0), (0,1), (0,-1)] {
+            let mut cur = rook.clone();
+            while let Some(dest) = cur.try_offset(offset.0, offset.1) {
+                cur = dest;
+                if player.all() & cur.board() != 0 {
+                    break;
+                } else if other.all() & cur.board() != 0 {
+                     moves.push(GenMove::new(rook, dest, Flags::CAPTURE));
+                     break;
+                }
+                moves.push(GenMove::new(rook, dest, Flags::NONE));
             }
         }
     }
@@ -208,8 +234,9 @@ pub fn generate_all_moves(
     other: &PartialBoard,
     moves: &mut Vec<GenMove>,
 ) {
-    generate_pawn_moves(player, &this, &other, moves);
     generate_knight_moves(player, &this, &other, moves);
+    generate_rook_moves(player, &this, &other, moves);
+    generate_pawn_moves(player, &this, &other, moves);
 }
 
 pub fn generate_moves(b: &Board, player: Color) -> Vec<GenMove> {
@@ -350,6 +377,14 @@ mod tests {
     }
 
     #[test]
+    fn case_iterator_last() {
+        let mut c = CaseIterator::new(0x8000_0000_0000_0000);
+        assert_eq!(Some(Case(63)), c.next());
+        assert_eq!(None, c.next());
+    }
+
+
+    #[test]
     fn case_iterator_one_two() {
         let mut c = CaseIterator::new(0b11);
         assert_eq!(Some(Case(0)), c.next());
@@ -481,6 +516,51 @@ mod tests {
         let fen = "r1bqkbnr/pp6/2n3p1/3ppp1p/2Pp1P1P/1P4P1/P1N1P3/R1BQKBNR b KQkq - 1 12";
         let b = parse_fen(fen).unwrap();
         println!("{:#?}", generate_moves(&b, Color::Black));
+    }
+
+    #[test]
+    fn genmoves_rook_white() {
+        test_moves_f(
+            Color::White,
+            vec![
+                (Color::White, Piece::Rook, "d4"),
+                (Color::Black, Piece::Knight, "e2"),
+            ],
+            vec![
+                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4", "d4e4", "d4f4", "d4g4", "d4h4",
+            ],
+            generate_rook_moves,
+        )
+    }
+
+    #[test]
+    fn genmoves_rook_white_obstacle() {
+        test_moves_f(
+            Color::White,
+            vec![
+                (Color::White, Piece::Rook, "d4"),
+                (Color::White, Piece::Knight, "f4"),
+            ],
+            vec![
+                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4", "d4e4",
+            ],
+            generate_rook_moves,
+        )
+    }
+
+    #[test]
+    fn genmoves_rook_white_capture() {
+        test_moves_f(
+            Color::White,
+            vec![
+                (Color::White, Piece::Rook, "d4"),
+                (Color::Black, Piece::Knight, "h4"),
+            ],
+            vec![
+                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4", "d4e4", "d4f4", "d4g4", "d4xh4",
+            ],
+            generate_rook_moves,
+        )
     }
 
     // to test: illegal black d5d4

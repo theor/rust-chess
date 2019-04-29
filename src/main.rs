@@ -1,9 +1,9 @@
 mod ai;
 mod board;
+mod evaluate;
 mod move_generator;
 mod player;
 mod validator;
-mod evaluate;
 
 #[macro_use]
 extern crate lazy_static;
@@ -20,9 +20,9 @@ extern crate bitflags;
 #[macro_use]
 extern crate galvanic_assert;
 
-use player::Player;
 use crate::board::*;
 use crate::validator::Validator;
+use player::Player;
 
 fn main() {
     use simplelog::*;
@@ -51,6 +51,14 @@ fn main() {
         ),
     ])
     .unwrap();
+
+    use std::panic;
+
+    panic::set_hook(Box::new(|p| {
+        let backtrace =  backtrace::Backtrace::new();
+
+        error!("{}\r\n{:?}", p, backtrace);
+    }));
 
     if uci {
         engine_uci();
@@ -104,7 +112,7 @@ impl Engine {
     pub fn new() -> Self {
         Engine {
             board: Board::empty(),
-            ai: crate::ai::AiPlayer::new([42,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,]),
+            ai: crate::ai::AiPlayer::new([42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             move_count: 0,
         }
     }
@@ -144,9 +152,13 @@ impl Engine {
             "position fen <FEN>" => unimplemented!(),               // reset position
             _ => {
                 if cmd.starts_with("go") {
-                    let color = if self.move_count % 2 == 0 { Color::White } else { Color::Black };
+                    let color = if self.move_count % 2 == 0 {
+                        Color::White
+                    } else {
+                        Color::Black
+                    };
                     let mov = self.ai.get_move(color, &self.board);
-                    //  if self.move_count % 2 == 0 { 
+                    //  if self.move_count % 2 == 0 {
                     //      if self.move_count % 4 == 0 { "b1a3" } else { "a3b1" }
                     // } else {
                     //     if self.move_count % 4 == 1 { "b8a6" } else { "a6b8" }
