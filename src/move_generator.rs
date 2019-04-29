@@ -105,13 +105,13 @@ struct CaseIterator {
 impl Iterator for CaseIterator {
     type Item = Case;
     fn next(&mut self) -> Option<Case> {
-        debug!("last: {}", self.last);
+        // debug!("last: {}", self.last);
         if self.last >= 64 {
-            debug!("  end");
+            // debug!("  end");
             None
         } else {
             let t = self.bitboard.trailing_zeros();
-            debug!("  trailing_zeros {}", t);
+            // debug!("  trailing_zeros {}", t);
             if t == 64 {
                 self.last = 64;
                 None
