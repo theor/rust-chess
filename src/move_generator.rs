@@ -117,7 +117,7 @@ impl Iterator for CaseIterator {
                 None
             } else if t == 63 {
                 self.last = 64;
-                 Some(Case(63))
+                Some(Case(63))
             } else {
                 self.bitboard = self.bitboard >> (t + 1);
                 self.last += t as i8 + 1;
@@ -175,7 +175,7 @@ pub fn generate_pawn_moves(
             PAWN_MOVES_WHITE_CAPTURES[piece.0 as usize],
             PAWN_MOVES_BLACK_CAPTURES[piece.0 as usize],
         );
-        
+
         // info!("cached captures {:#064b}", cached_captures);
         for dest in CaseIterator::new(cached_captures) {
             // info!(
@@ -195,7 +195,7 @@ pub fn generate_pawn_moves(
                 PAWN_MOVES_WHITE[piece.0 as usize],
                 PAWN_MOVES_BLACK[piece.0 as usize],
             );
-            
+
             for dest in CaseIterator::new(cached) {
                 if player.all() & dest.board() == 0 && other.all() & dest.board() == 0 {
                     moves.push(GenMove::new(piece, dest, Flags::NONE))
@@ -205,27 +205,97 @@ pub fn generate_pawn_moves(
     }
 }
 
-pub fn generate_rook_moves(
-    color: Color,
+fn generate_sliding_moves(
+    pieces: u64,
     player: &PartialBoard,
     other: &PartialBoard,
     moves: &mut Vec<GenMove>,
+    offsets: &[(i8, i8)],
+    is_king: bool,
 ) {
-    for rook in CaseIterator::new(player.rooks) {
-        for offset in &[(1,0), (-1,0), (0,1), (0,-1)] {
+    for rook in CaseIterator::new(pieces) {
+        for offset in offsets {
             let mut cur = rook.clone();
             while let Some(dest) = cur.try_offset(offset.0, offset.1) {
                 cur = dest;
                 if player.all() & cur.board() != 0 {
                     break;
                 } else if other.all() & cur.board() != 0 {
-                     moves.push(GenMove::new(rook, dest, Flags::CAPTURE));
-                     break;
+                    moves.push(GenMove::new(rook, dest, Flags::CAPTURE));
+                    break;
                 }
                 moves.push(GenMove::new(rook, dest, Flags::NONE));
+                if is_king {
+                    break;
+                }
             }
         }
     }
+}
+
+pub fn generate_bishop_moves(
+    color: Color,
+    player: &PartialBoard,
+    other: &PartialBoard,
+    moves: &mut Vec<GenMove>,
+) {
+    generate_sliding_moves(
+        player.bishops,
+        player,
+        other,
+        moves,
+        &[(1, 1), (-1, 1), (1, -1), (-1, -1)],
+        false,
+    )
+}
+pub fn generate_rook_moves(
+    color: Color,
+    player: &PartialBoard,
+    other: &PartialBoard,
+    moves: &mut Vec<GenMove>,
+) {
+    generate_sliding_moves(
+        player.rooks,
+        player,
+        other,
+        moves,
+        &[(1, 0), (-1, 0), (0, 1), (0, -1)],
+        false,
+    )
+}
+
+pub fn generate_queen_moves(
+    color: Color,
+    player: &PartialBoard,
+    other: &PartialBoard,
+    moves: &mut Vec<GenMove>,
+) {
+    generate_sliding_moves(
+        player.queens,
+        player,
+        other,
+        moves,
+        &[(1, 1), (-1, 1), (1, -1), (-1, -1),
+          (1, 0), (-1, 0), (0, 1), (0, -1)],
+        false,
+    )
+}
+
+pub fn generate_king_moves(
+    color: Color,
+    player: &PartialBoard,
+    other: &PartialBoard,
+    moves: &mut Vec<GenMove>,
+) {
+    generate_sliding_moves(
+        player.queens,
+        player,
+        other,
+        moves,
+        &[(1, 1), (-1, 1), (1, -1), (-1, -1),
+          (1, 0), (-1, 0), (0, 1), (0, -1)],
+        true,
+    )
 }
 
 pub fn generate_all_moves(
@@ -235,7 +305,10 @@ pub fn generate_all_moves(
     moves: &mut Vec<GenMove>,
 ) {
     generate_knight_moves(player, &this, &other, moves);
+    generate_queen_moves(player, &this, &other, moves);
+    generate_king_moves(player, &this, &other, moves);
     generate_rook_moves(player, &this, &other, moves);
+    generate_bishop_moves(player, &this, &other, moves);
     generate_pawn_moves(player, &this, &other, moves);
 }
 
@@ -383,7 +456,6 @@ mod tests {
         assert_eq!(None, c.next());
     }
 
-
     #[test]
     fn case_iterator_one_two() {
         let mut c = CaseIterator::new(0b11);
@@ -527,7 +599,8 @@ mod tests {
                 (Color::Black, Piece::Knight, "e2"),
             ],
             vec![
-                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4", "d4e4", "d4f4", "d4g4", "d4h4",
+                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4",
+                "d4e4", "d4f4", "d4g4", "d4h4",
             ],
             generate_rook_moves,
         )
@@ -542,7 +615,8 @@ mod tests {
                 (Color::White, Piece::Knight, "f4"),
             ],
             vec![
-                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4", "d4e4",
+                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4",
+                "d4e4",
             ],
             generate_rook_moves,
         )
@@ -557,9 +631,26 @@ mod tests {
                 (Color::Black, Piece::Knight, "h4"),
             ],
             vec![
-                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4", "d4e4", "d4f4", "d4g4", "d4xh4",
+                "d4d1", "d4d2", "d4d3", "d4d5", "d4d6", "d4d7", "d4d8", "d4a4", "d4b4", "d4c4",
+                "d4e4", "d4f4", "d4g4", "d4xh4",
             ],
             generate_rook_moves,
+        )
+    }
+
+    #[test]
+    fn genmoves_bishop_white() {
+        test_moves_f(
+            Color::White,
+            vec![
+                (Color::White, Piece::Bishop, "d4"),
+                (Color::Black, Piece::Knight, "h4"),
+            ],
+            vec![
+                "d4a1", "d4b2", "d4c3", "d4e5", "d4f6", "d4g7", "d4h8", "d4a7", "d4b6", "d4c5",
+                "d4e3", "d4f2", "d4g1",
+            ],
+            generate_bishop_moves,
         )
     }
 
