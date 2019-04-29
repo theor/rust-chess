@@ -328,7 +328,7 @@ mod tests {
             Some(Quiet),
             Validator::check_move(
                 &b,
-                &GenMove::new(Case::new(0, 1), Case::new(0, 2), Flags::NONE)
+                &GenMove::new(Case::new(1, 0), Case::new(2, 0), Flags::NONE)
             )
         );
     }
