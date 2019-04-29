@@ -1,78 +1,6 @@
+use move_generator::Case;
+use move_generator::GenMove;
 use std::fmt;
-
-#[derive(Debug)]
-pub struct Pos(pub u8, pub u8);
-
-impl std::fmt::Display for Pos {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let col = "abcdefgh".chars().nth(self.0 as usize).unwrap();
-        write!(f, "{}{}", col, self.1 + 1)
-    }
-}
-
-#[derive(Debug)]
-pub struct Move {
-    pub from: Pos,
-    pub to: Pos,
-}
-
-impl std::fmt::Display for Move {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}{}", self.from, self.to)
-    }
-}
-
-impl Move {
-    pub fn new(fx: u8, fy: u8, tx: u8, ty: u8) -> Self {
-        Move {
-            from: Pos(fx, fy),
-            to: Pos(tx, ty),
-        }
-    }
-}
-
-use std::str::FromStr;
-use std::{char::ParseCharError, num::ParseIntError};
-
-#[derive(Debug)]
-pub enum ParseError {
-    RowError(ParseIntError),
-    CollError(ParseCharError),
-}
-
-impl Into<ParseError> for ParseIntError {
-    fn into(self) -> ParseError {
-        ParseError::RowError(self)
-    }
-}
-
-impl Into<ParseError> for ParseCharError {
-    fn into(self) -> ParseError {
-        ParseError::CollError(self)
-    }
-}
-
-impl FromStr for Move {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let coords: Vec<&str> = s.trim_end().split(" ").collect();
-
-        println!("{:?}", coords);
-        let fcx = coords[0].parse::<char>().map_err(ParseError::CollError)?;
-        let fx = fcx as u8 - 'a' as u8;
-        let fy = coords[1].parse::<u8>().map_err(ParseError::RowError)?;
-
-        let ftx = coords[2].parse::<char>().map_err(ParseError::CollError)?;
-        let tx = ftx as u8 - 'a' as u8;
-        let ty = coords[3].parse::<u8>().map_err(ParseError::RowError)?;
-
-        Ok(Move {
-            from: Pos(fx, fy),
-            to: Pos(tx, ty),
-        })
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
@@ -108,7 +36,7 @@ impl Color {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Piece {
     Pawn,
     Knight,
@@ -214,9 +142,9 @@ impl Board {
         self.white.all() | self.black.all()
     }
 
-    pub fn apply(&self, m: &Move) -> Option<Board> {
-        let Pos(x, y) = m.from;
-        let Pos(tx, ty) = m.to;
+    pub fn apply(&self, m: &GenMove) -> Option<Board> {
+        let (x, y) = m.from.pos();
+        let (tx, ty) = m.to.pos();
         let (p, c) = self.at(x, y)?;
 
         let mut new = self.clone();
@@ -225,10 +153,14 @@ impl Board {
             Board::unset(from, x, y);
         }
         {
+            // capture
             if let Some((cp, cc)) = new.at(tx, ty) {
                 Board::unset(new.get_pc_board_mut(cp, cc), tx, ty);
             }
-            let from = new.get_pc_board_mut(p, c);
+
+            // promotion
+            let target_piece_board = m.promotion.unwrap_or(p);
+            let from = new.get_pc_board_mut(target_piece_board, c);
             Board::set(from, tx, ty);
         }
         Some(new)
@@ -270,29 +202,29 @@ impl Board {
         Board::has(self.all(), x, y)
     }
 
-    pub fn empty_at(&self, p: &Pos) -> bool {
-        let &Pos(x, y) = p;
+    pub fn empty_at(&self, p: &Case) -> bool {
+        let (x, y) = p.pos();
         !Board::has(self.all(), x, y)
     }
 
-    pub fn color_or_empty_at(&self, c: Color, p: &Pos) -> bool {
-        let &Pos(x, y) = p;
+    pub fn color_or_empty_at(&self, c: Color, p: &Case) -> bool {
+        let (x, y) = p.pos();
         match c {
             Color::White => !Board::has(self.black.all(), x, y),
             Color::Black => !Board::has(self.white.all(), x, y),
         }
     }
 
-    pub fn color_at(&self, c: Color, p: &Pos) -> bool {
-        let &Pos(x, y) = p;
+    pub fn color_at(&self, c: Color, p: &Case) -> bool {
+        let (x, y) = p.pos();
         match c {
             Color::White => Board::has(self.white.all(), x, y),
             Color::Black => Board::has(self.black.all(), x, y),
         }
     }
 
-    pub fn at_pos(&self, m: &Pos) -> Option<(Piece, Color)> {
-        let &Pos(x, y) = m;
+    pub fn at_pos(&self, m: &Case) -> Option<(Piece, Color)> {
+        let (x, y) = m.pos();
         self.at(x, y)
     }
 

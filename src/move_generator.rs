@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::board::*;
 use std::fmt;
 
@@ -8,7 +9,6 @@ bitflags! {
         const CASTLE = 0b00000010;
         const DOUBLE_STEP = 0b00000100;
         const CAPTURE = 0b1000;
-        const PROMOTION = 0b10000;
         // const ABC = Self::A.bits | Self::B.bits | Self::C.bits;
     }
 }
@@ -23,6 +23,13 @@ impl fmt::Debug for Case {
     }
 }
 
+impl std::fmt::Display for Case {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let col = "abcdefgh".chars().nth(self.col() as usize).unwrap();
+        write!(f, "{}{}", col, self.row() + 1,)
+    }
+}
+
 impl Case {
     pub fn new(row: u8, col: u8) -> Self {
         Case(row * 8u8 + col)
@@ -34,7 +41,7 @@ impl Case {
     {
         let fcx = it.next()?;
         let fx = fcx as i8 - 'a' as i8;
-        let fy = it.next().unwrap().to_digit(10).unwrap();
+        let fy = it.next().expect(&format!("should find a digit after {}", fcx)).to_digit(10).expect("digit");
         let from = Case::new((fy - 1) as u8, fx as u8);
         Some(from)
     }
@@ -66,6 +73,10 @@ impl Case {
     pub fn board(&self) -> u64 {
         1 << self.0
     }
+
+    pub fn pos(&self) -> (u8,u8) {
+        (self.col(), self.row())
+    }
 }
 
 impl Into<Case> for u8 {
@@ -76,27 +87,61 @@ impl Into<Case> for u8 {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenMove {
-    from: Case,
-    to: Case,
-    flags: Flags,
+    pub from: Case,
+    pub to: Case,
+    pub flags: Flags,
+    pub promotion: Option<Piece>,
 }
 
 impl GenMove {
     pub fn new(from: Case, to: Case, flags: Flags) -> Self {
-        GenMove { from, to, flags }
+        GenMove { from, to, flags, promotion:None }
+    }
+
+    pub fn promotion(self, p:Option<Piece>) -> Self {
+        GenMove { promotion: p, ..self }
     }
 }
 
-impl Into<Move> for GenMove {
-    fn into(self) -> Move {
-        Move::new(
-            self.from.col(),
-            self.from.row(),
-            self.to.col(),
-            self.to.row(),
-        )
+impl std::fmt::Display for GenMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}{}{}", self.from, self.to, self.promotion.map_or("", |p| ""))
     }
 }
+
+impl FromStr for GenMove {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut it = s.chars();
+        let f = Case::parse(&mut it).unwrap();
+        let t = Case::parse(&mut it).unwrap();
+        Ok(GenMove::new(f, t, Flags::NONE))
+    }
+}
+
+
+use std::{char::ParseCharError, num::ParseIntError};
+
+#[derive(Debug)]
+pub enum ParseError {
+    Error,
+    // RowError(ParseIntError),
+    // CollError(ParseCharError),
+}
+
+// impl Into<ParseError> for ParseIntError {
+//     fn into(self) -> ParseError {
+//         ParseError::RowError(self)
+//     }
+// }
+
+// impl Into<ParseError> for ParseCharError {
+//     fn into(self) -> ParseError {
+//         ParseError::CollError(self)
+//     }
+// }
+
 
 struct CaseIterator {
     bitboard: u64,
@@ -199,14 +244,14 @@ pub fn generate_pawn_moves(
 
             for dest in CaseIterator::new(cached) {
                 if player.all() & dest.board() == 0 && other.all() & dest.board() == 0 {
-                    let f = if (color == Color::White && dest.row() == 7)
+                    let p = if (color == Color::White && dest.row() == 7)
                         || (color == Color::Black && dest.row() == 0)
                     {
-                        Flags::PROMOTION
+                        Some(Piece::Queen)
                     } else {
-                        Flags::NONE
+                        None
                     };
-                    moves.push(GenMove::new(piece, dest, f))
+                    moves.push(GenMove::new(piece, dest, Flags::NONE).promotion(p))
                 }
             }
         }

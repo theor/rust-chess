@@ -38,7 +38,7 @@ impl AiPlayer {
 }
 
 impl Player for AiPlayer {
-    fn get_move(&mut self, c: Color, b: &Board) -> Move {
+    fn get_move(&mut self, c: Color, b: &Board) -> GenMove {
         // use rand::prelude::SliceRandom;
         let mut moves = generate_moves(b, c)
             .iter()
@@ -51,9 +51,9 @@ impl Player for AiPlayer {
             .collect::<Vec<(GenMove, i32)>>();
         moves.sort_by_key(|x| x.1);
         info!("all {} moves\r\n{:#?}", moves.len(), moves);
-        moves.iter().last().cloned().unwrap().0.into()
+        moves.iter().last().cloned().unwrap().0
         // let m = moves.choose(&mut self.rng).cloned().unwrap();
-        // m.into()
+        // m
     }
 }
 

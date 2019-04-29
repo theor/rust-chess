@@ -1,4 +1,5 @@
 use crate::board::*;
+use crate::move_generator::*;
 
 pub struct Validator {}
 
@@ -52,13 +53,13 @@ impl Validator {
         }
     }
 
-    fn validate_sliding(m: &Move, c: Color, b: &Board, dx:u8, dy: u8) -> Option<MoveType> {
-        let (sx, sy) = (Self::cmp(m.from.0, m.to.0), Self::cmp(m.from.1, m.to.1));
+    fn validate_sliding(m: &GenMove, c: Color, b: &Board, dx:u8, dy: u8) -> Option<MoveType> {
+        let (sx, sy) = (Self::cmp(m.from.col(), m.to.col()), Self::cmp(m.from.row(), m.to.row()));
         let d = u8::max(dx, dy);
         for i in 1..d as i16 {
-            let dpos = Pos(
-                (m.from.0 as i16 + sx * i) as u8,
-                (m.from.1 as i16 + sy * i) as u8,
+            let dpos = Case::new(
+                (m.from.col() as i16 + sx * i) as u8,
+                (m.from.row() as i16 + sy * i) as u8,
             );
             if !b.empty_at(&dpos) {
                 return None;
@@ -67,17 +68,17 @@ impl Validator {
         MoveType::map(b.color_or_empty_at(c.rev(), &m.to), !b.empty_at(&m.to))
     }
 
-    pub fn check_move(b: &Board, m: &Move) -> Option<MoveType> {
+    pub fn check_move(b: &Board, m: &GenMove) -> Option<MoveType> {
         let (dx, dy) = (
-            Self::delta_abs(m.to.0, m.from.0),
-            Self::delta_abs(m.to.1, m.from.1),
+            Self::delta_abs(m.to.col(), m.from.col()),
+            Self::delta_abs(m.to.row(), m.from.row()),
         );
         if let Some((p, c)) = b.at_pos(&m.from) {
             match p {
                 Piece::Pawn => {
                     let (fwd, from_start_row) = match c {
-                        Color::White => (m.to.1 > m.from.1, m.from.1 == 1),
-                        Color::Black => (m.to.1 < m.from.1, m.from.1 == 6),
+                        Color::White => (m.to.row() > m.from.row(), m.from.row() == 1),
+                        Color::Black => (m.to.row() < m.from.row(), m.from.row() == 6),
                     };
                     if !fwd {
                         None
